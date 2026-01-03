@@ -1,18 +1,31 @@
-const http = require('http');
-const app = require('./app');
-const config = require('./config/config')
-const { logger } = require('./utils/logger'); // This extracts just the logger
-const gracefulShutdown = require('http-graceful-shutdown');
+const http = require("http");
+const gracefulShutdown = require("http-graceful-shutdown");
+
+const app = require("./app");
+const config = require("./config/config");
+const { logger } = require("./utils/logger");
+const db = require("./db");
+const {
+  connectProducer,
+  disconnectProducer
+} = require("./kafka/producer");
 const server = http.createServer(app);
 
-server.listen(config.port, () => {
-    logger.info(`User Service running on port ${config.port}`);
-});
+(async () => {
+  await connectProducer();
 
+  server.listen(config.port, () => {
+    logger.info(`Order Service running on port ${config.port}`);
+  });
+})();
+
+
+// Graceful shutdown (VERY IMPORTANT for K8s)
 gracefulShutdown(server, {
   signals: "SIGINT SIGTERM",
   timeout: 30000,
   onShutdown: async () => {
-    logger.info("Shutting down User Service gracefully...");
+    logger.info("Shutting down Order Service gracefully...");
+    await db.close();
   }
 });

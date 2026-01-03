@@ -1,28 +1,26 @@
-const logger = require("../utils/logger");
+const { logger } = require("../utils/logger");
 
-/**
- * Central error handling middleware
- */
 const errorHandler = (err, req, res, next) => {
   logger.error(err);
 
-  // Default error values
-  let statusCode = 500;
-  let message = "Internal Server Error";
-
-  // Custom application errors
-  if (err.message === "User already exists") {
-    statusCode = 409;
-    message = err.message;
+  // RFC 7807 compliant operational errors
+  if (err.isOperational) {
+    return res.status(err.status).json({
+      type: err.type,
+      title: err.title,
+      status: err.status,
+      detail: err.detail,
+      instance: req.originalUrl
+    });
   }
 
-  if (err.message === "Invalid email or password") {
-    statusCode = 401;
-    message = err.message;
-  }
-
-  res.status(statusCode).json({
-    error: message
+  // Fallback – unknown / programming errors
+  return res.status(500).json({
+    type: "https://order-service/problems/internal-server-error",
+    title: "Internal Server Error",
+    status: 500,
+    detail: "An unexpected error occurred",
+    instance: req.originalUrl
   });
 };
 

@@ -1,6 +1,6 @@
 const { Pool } = require("pg");
 const config = require("../config/config");
-const logger = require("../utils/logger");
+const {logger} = require("../utils/logger");
 
 const pool = new Pool({
   connectionString: config.database.url,

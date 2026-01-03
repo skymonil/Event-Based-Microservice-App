@@ -2,7 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
-const userRoutes = require("./routes/user.routes");
+const orderRoutes = require("./routes/order.routes");
 const errorHandler = require("./middleware/error.middleware");
 
 const app = express();
@@ -25,7 +25,7 @@ app.get("/health", (req, res) => {
 });
 
 // Routes
-app.use("/api", userRoutes);
+app.use("/api", orderRoutes);
 
 // Central error handler (must be last)
 app.use(errorHandler);

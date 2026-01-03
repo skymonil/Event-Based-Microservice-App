@@ -1,0 +1,18 @@
+src/
+├── config/
+├── controllers/
+├── db/
+│   ├── migrations/
+│   ├── queries/
+│   └── index.js
+├── middleware/
+│   ├── auth.middleware.js
+│   ├── error.middleware.js
+│   ├── request-id.middleware.js
+│   └── validate.middleware.js
+├── routes/
+├── services/
+├── utils/
+├── validators/
+├── app.js
+└── index.js
