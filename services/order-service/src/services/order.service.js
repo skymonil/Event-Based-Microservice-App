@@ -119,8 +119,28 @@ const getOrdersForUser = async (userId) => {
   }));
 };
 
+const handlePaymentCompleted = async(orderId,paymentId) =>{
+  await orderQueries.updateOrderStatus(
+    orderId,
+    "PAID"
+  )
+}
+const handlePaymentFailed = async(orderId,paymentId,reason) =>{
+  await orderQueries.updateOrderStatus(
+    orderId,
+    "PAYMENT_FAILED"
+  )
+}
+
+const healthCheck = async () => {
+  await orderQueries.ping(); // SELECT 1
+};
+
 module.exports = {
   createOrder,
   getOrderById,
-  getOrdersForUser
+  getOrdersForUser,
+  handlePaymentCompleted,
+  handlePaymentFailed,
+  healthCheck
 };

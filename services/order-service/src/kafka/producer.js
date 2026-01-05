@@ -1,13 +1,13 @@
-const {Kafka} = require('kafkajs')
-const config = require('../config/config')
+const kafka = require('./kafka')
 const {logger} = require('../utils/logger')
-
-const kafka = new Kafka({
-    clientId: "order-service",
-    brokers: config.kafka.brokers
-})
-
-const producer = kafka.producer();
+const { context, propagation } = require("@opentelemetry/api");
+const producer = kafka.producer({
+  allowAutoTopicCreation: false,
+  idempotent: true,          // 👈 VERY important
+  maxInFlightRequests: 5,
+  transactionTimeout: 30000,
+createPartitioner: Partitioners.DefaultPartitioner}
+);
 
 const connectProducer = async() => {
     await producer.connect();
@@ -21,13 +21,21 @@ const disconnectProducer = async () => {
 
 
 const publishOrderCreated = async (event) => {
+
+  const traceHeaders = {};
+  propagation.inject(context.active(), headers);
+
   await producer.send({
     topic: "order.created",
+    // Ensure all replicas acknowledge receipt to prevent data loss
+    acks : -1,
     messages: [
       {
+        // Use orderId as key to ensure all events for one order go to the same partiti
         key: event.orderId,
         // HEADERS: For infrastructure (tracing, idempotency, routing)
         headers: {
+          ...traceHeaders,
           'x-request-id': event.requestId,
           'x-idempotency-key': event.idempotencyKey,
           'x-event-type': 'order.created'

@@ -55,9 +55,21 @@ const getOrderByIdempotencyKey = async (key) => {
   return result.rows[0] || null;
 };
 
+const updateOrderStatus = async(orderId, status)=> {
+  await db.query(
+    `
+    UPDATE orders
+    set status = $1
+    where id = $2
+    `,
+    [status, orderId]
+  )
+}
+
 module.exports = {
   createOrder,
   getOrderById,
   getOrdersByUserId,
-  getOrderByIdempotencyKey
+  getOrderByIdempotencyKey,
+  updateOrderStatus
 };

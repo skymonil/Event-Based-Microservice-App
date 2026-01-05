@@ -1,4 +1,3 @@
-require("./telemetry");
 const http = require("http");
 const gracefulShutdown = require("http-graceful-shutdown");
 
@@ -15,9 +14,9 @@ const server = http.createServer(app);
 
 (async () => {
   await connectProducer();
-  await startConsumer();
+ await startConsumer();
   server.listen(config.port, () => {
-    logger.info(`Order Service running on port ${config.port}`);
+    logger.info(`Payment Service running on port ${config.port}`);
   });
 })();
 
