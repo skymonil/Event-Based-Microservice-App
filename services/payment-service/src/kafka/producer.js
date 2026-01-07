@@ -1,7 +1,7 @@
 const {logger} = require('../utils/logger')
 const{ Partitioners }= require('kafkajs')
 const kafka = require('./kafka')
-
+const { context, propagation } = require("@opentelemetry/api");
 const producer = kafka.producer({
   allowAutoTopicCreation: false,
   idempotent: true,          // 👈 VERY important
@@ -22,6 +22,8 @@ const disconnectProducer = async () => {
 
 
 const publishPaymentCompleted = async (event) => {
+  const traceHeaders = {};
+  propagation.inject(context.active(), traceHeaders);
   await producer.send({
     topic: "payment.completed",
     messages: [
@@ -30,6 +32,7 @@ const publishPaymentCompleted = async (event) => {
         acks : -1,
         // Transport / tracing metadata ONLY
         headers: {
+          ...traceHeaders,
           "x-request-id": event.requestId,
           "x-event-name": "payment.completed",
           "x-event-version": "1",
@@ -52,6 +55,8 @@ const publishPaymentCompleted = async (event) => {
 };;
 
 const publishPaymentFailed = async(event) =>{
+   const traceHeaders = {};
+  propagation.inject(context.active(), traceHeaders);
   await producer.send({
     topic: "payment.failed",
      messages: [
@@ -60,6 +65,7 @@ const publishPaymentFailed = async(event) =>{
 
         // Transport / tracing metadata ONLY
         headers: {
+           ...traceHeaders,
           "x-request-id": event.requestId,
           "x-event-name": "payment.failed",
           "x-event-version": "1",

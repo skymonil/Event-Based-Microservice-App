@@ -18,7 +18,6 @@ const isInfraError = (err) => {
 
 const sleep = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms));
-
 const kafka = require("./kafka");
 const orderService = require("../services/order.service");
 const { sendToDLQ } = require('./dlq.producer')
@@ -26,13 +25,20 @@ const { exponentialBackoff } = require("../utils/backoff");
 const { context, propagation } = require("@opentelemetry/api");
 
 const { trace } = require("@opentelemetry/api");
+const { disconnectProducer } = require("./producer");
 const tracer = trace.getTracer("order-service");
 const MAX_RETRIES = 3;
 const SERVICE_NAME = "order-service";
 
 const consumer = kafka.consumer({
-  groupId: SERVICE_NAME
-})
+  groupId: SERVICE_NAME,
+
+  
+
+  sessionTimeout: 30000,
+  heartbeatInterval: 3000,
+  rebalanceTimeout: 60000
+});
 
 const waitForInfraRecovery = async (topic) => {
   while (!isInfraHealthy) {
@@ -153,4 +159,8 @@ const startConsumer = async () => {
   });
 }
 
-module.exports = { startConsumer };
+const disconnectConsumer = async () => {
+  await consumer.disconnect();
+}
+
+module.exports = { startConsumer, disconnectConsumer };

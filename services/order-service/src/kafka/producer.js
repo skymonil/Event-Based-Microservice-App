@@ -1,6 +1,7 @@
 const kafka = require('./kafka')
 const {logger} = require('../utils/logger')
 const { context, propagation } = require("@opentelemetry/api");
+const {Partitioners} = require('kafkajs')
 const producer = kafka.producer({
   allowAutoTopicCreation: false,
   idempotent: true,          // 👈 VERY important
@@ -23,7 +24,7 @@ const disconnectProducer = async () => {
 const publishOrderCreated = async (event) => {
 
   const traceHeaders = {};
-  propagation.inject(context.active(), headers);
+  propagation.inject(context.active(), traceHeaders);
 
   await producer.send({
     topic: "order.created",

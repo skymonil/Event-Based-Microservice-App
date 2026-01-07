@@ -10,7 +10,11 @@ const {
   connectProducer,
   disconnectProducer
 } = require("./kafka/producer");
-const {startConsumer} = require('./kafka/consumer')
+const {
+  startConsumer,
+  disconnectConsumer
+} = require("./kafka/consumer");
+
 const server = http.createServer(app);
 
 (async () => {
@@ -28,6 +32,25 @@ gracefulShutdown(server, {
   timeout: 30000,
   onShutdown: async () => {
     logger.info("Shutting down Order Service gracefully...");
-    await db.close();
+
+    // 1. Disconnect Consumer first: Stop receiving new messages
+    try {
+      logger.info("Disconnecting Kafka Consumer...");
+       await disconnectConsumer(); 
+        logger.info("Kafka Consumer disconnected.");
+    } catch (err) {
+      logger.error("Error disconnecting Kafka Consumer:", err)
+    }
+
+    try {
+      logger.info("Closing database connection...");
+      await db.close();
+      logger.info("Database connection closed.");
+    } catch (err) {
+      logger.error("Error closing database:", err);
+    }
+  },
+  finally: () => {
+    logger.info("Order Service shutdown complete.");
   }
 });
