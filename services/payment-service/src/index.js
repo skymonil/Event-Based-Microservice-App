@@ -6,8 +6,7 @@ const config = require("./config/config");
 const { logger } = require("./utils/logger");
 const db = require("./db");
 const {
-  connectProducer,
-  disconnectProducer
+  connectProducer
 } = require("./kafka/producer");
 const {startConsumer} = require('./kafka/consumer')
 const server = http.createServer(app);

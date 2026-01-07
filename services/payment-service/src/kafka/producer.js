@@ -2,92 +2,45 @@ const {logger} = require('../utils/logger')
 const{ Partitioners }= require('kafkajs')
 const kafka = require('./kafka')
 const { context, propagation } = require("@opentelemetry/api");
-const producer = kafka.producer({
-  allowAutoTopicCreation: true,
-  idempotent: true,          // 👈 VERY important
-  maxInFlightRequests: 5,
-  transactionTimeout: 30000,
-}
-);
 
-const connectProducer = async() => {
-    await producer.connect();
-    logger.info("Kafka producer connected")
-}
-
-const disconnectProducer = async () => {
-  await producer.disconnect();
-  logger.info("Kafka producer disconnected");
+// No-ops to maintain compatibility with your service startup logic
+const connectProducer = async () => {
+  logger.info("CDC Outbox mode active in Payment Service.");
 };
 
 
-const publishPaymentCompleted = async (event) => {
+
+
+const preparePaymentEvent = (event, eventType) => {
   const traceHeaders = {};
   propagation.inject(context.active(), traceHeaders);
-  await producer.send({
-    topic: "payment.completed",
-    messages: [
-      {
-        key: event.orderId,
-        acks : -1,
-        // Transport / tracing metadata ONLY
-        headers: {
-          ...traceHeaders,
-          "x-request-id": event.requestId,
-          "x-event-name": "payment.completed",
-          "x-event-version": "1",
-          "x-source-service": "payment-service"
-        },
 
-        // All business data lives here
-        value: JSON.stringify({
-          orderId: event.orderId,
-          paymentId: event.paymentId,
-          userId: event.userId,
-          amount: event.amount,
-          status: "COMPLETED",
-          provider: "MOCK",
-          occurredAt: new Date().toISOString()
-        })
-      }
-    ]
-  });
-};;
+  logger.info(`Preparing ${eventType} outbox event for Order: ${event.orderId}`);
 
-const publishPaymentFailed = async(event) =>{
-   const traceHeaders = {};
-  propagation.inject(context.active(), traceHeaders);
-  await producer.send({
-    topic: "payment.failed",
-     messages: [
-      {
-        key: event.orderId,
+  return {
+    aggregate_type: 'PAYMENT',
+    aggregate_id: event.orderId, // We use orderId as the key for partition grouping
+    event_type: eventType,       // 'payment.completed' or 'payment.failed'
+    payload: {
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      userId: event.userId,
+      amount: event.amount,
+      status: eventType === 'payment.completed' ? "COMPLETED" : "FAILED",
+      provider: "MOCK",
+      occurredAt: new Date().toISOString()
+    },
+    metadata: {
+      ...traceHeaders,
+      'x-request-id': event.requestId,
+      'x-source-service': 'payment-service'
+    }
+  };
+};
 
-        // Transport / tracing metadata ONLY
-        headers: {
-           ...traceHeaders,
-          "x-request-id": event.requestId,
-          "x-event-name": "payment.failed",
-          "x-event-version": "1",
-          "x-source-service": "payment-service"
-        },
 
-        // All business data lives here
-        value: JSON.stringify({
-          orderId: event.orderId,
-          paymentId: event.paymentId,
-          userId: event.userId,
-          amount: event.amount,
-          status: "FAILED",
-          provider: "MOCK",
-          occurredAt: new Date().toISOString()
-        })
-      }
-    ]
-  })
-}
 module.exports = {
-  publishPaymentCompleted,
-  publishPaymentFailed,
-  connectProducer,
+  preparePaymentEvent,
+  connectProducer
+  
 };

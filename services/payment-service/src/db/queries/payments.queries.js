@@ -1,17 +1,18 @@
 const db = require("../index");
 
-// Create a new payment record
-
-const createPayment = async ({
-  payment, client = db
-}) => {
-  const { id, orderId, userId, amount, currency, status, provider, idempotencyKey } = payment;
+/**
+ * Create a new payment record
+ * Ensure the first parameter is the data object, second is the client
+ */
+const createPayment = async (paymentData, client = db) => {
+  const { id, orderId, userId, amount, currency, status, provider, idempotencyKey } = paymentData;
   await client.query(
     `INSERT INTO payments (id, order_id, user_id, amount, currency, status, provider, idempotency_key)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [id, orderId, userId, amount, currency, status, provider, idempotencyKey]
   );
-}
+};
+
 const createOutboxEntry = async (entry, client = db) => {
   const { aggregate_type, aggregate_id, event_type, payload, metadata } = entry;
   await client.query(
@@ -20,6 +21,7 @@ const createOutboxEntry = async (entry, client = db) => {
     [aggregate_type, aggregate_id, event_type, payload, metadata]
   );
 };
+
 
 // Get payments by order ID
 const getPaymentsByOrderId = async (orderId) => {
