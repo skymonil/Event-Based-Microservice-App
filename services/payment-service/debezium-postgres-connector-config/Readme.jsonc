@@ -1,0 +1,39 @@
+{
+  "name": "order-outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    /* 1. Database Connection */
+    "database.hostname": "host.docker.internal",
+    "database.port": "5432",
+    "database.user": "your_db_user",
+    "database.password": "your_db_password",
+    "database.dbname": "order_db",
+    "database.server.name": "order_service_db",
+    "plugin.name": "pgoutput",
+
+    /* 2. Outbox Table Filtering */
+    "table.include.list": "public.outbox",
+
+    /* 3. Outbox SMT (Single Message Transform) */
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+
+    // This maps the 'event_type' column to the Kafka Topic Name
+    "transforms.outbox.route.by.field": "event_type",
+    "transforms.outbox.route.topic.replacement": "${routedByValue}",
+
+    // This maps the 'aggregate_id' column to the Kafka Message Key (for ordering)
+    "transforms.outbox.table.field.event.key": "aggregate_id",
+
+    // This tells Debezium to extract the 'payload' column as the message body
+    "transforms.outbox.table.field.event.payload": "payload",
+
+    // This ensures the Kafka message is clean JSON, not the Debezium envelope
+    "transforms.outbox.table.expand.json.payload": "true",
+    
+    // Optional: Pass metadata columns as Kafka Headers
+    "transforms.outbox.table.fields.additional.placement": "metadata:header:event_metadata"
+  }
+}

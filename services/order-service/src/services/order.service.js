@@ -1,8 +1,8 @@
 const { v4: uuidv4 } = require("uuid");
 const orderQueries = require("../db/queries/order.queries");
-const { publishOrderCreated } = require("../kafka/producer");
+const { prepareOrderCreatedEvent } = require("../kafka/producer");
 const AppError = require("../utils/app-error");
-
+const db = require("../db"); // Import the DB pool to start transactions
 /**
  * Create a new order
  */
@@ -20,55 +20,62 @@ const createOrder = async ({
 
     if (existing) {
       return {
-        id: existing.id,
-        userId: existing.user_id,
-        totalAmount: existing.total_amount,
-        status: existing.status,
-        idempotencyKey: existing.idempotency_key,
+        ...existing,
         isDuplicate: true
       };
     }
   }
-
-  const order = {
-    id: uuidv4(),
+  const orderId = uuidv4();
+  const orderData = {
+    id: orderId,
     userId,
-    items: JSON.stringify(items),
+    items ,
     totalAmount,
     status: "CREATED",
     idempotencyKey
   };
 
-  // Persist first (source of truth)
-  await orderQueries.createOrder(order);
+// 🛡️ TRANSACTIONAL OUTBOX PATTERN
+  // We use a single transaction for both the order and outbox 
+  const client = await db.connect()
+  try{
+    await client.query('BEGIN');
+    // 1. Persist the Order
+    await orderQueries.createOrder(orderData, client);
 
-  // Publish domain event
-  try {
-    await publishOrderCreated({
-      orderId: order.id,
+    // 2. Prepare the Outbox Event (includes OpenTelemetry tracing)
+    const outboxEntry = prepareOrderCreatedEvent({
+      orderId,
       userId,
       totalAmount,
+      items,
       createdAt: new Date().toISOString(),
       requestId,
       idempotencyKey
-    });
-  } catch (err) {
-    // Infrastructure failure → RFC 7807
-    throw new AppError({
-      type: "https://order-service/problems/event-publish-failed",
-      title: "Event Publish Failed",
-      status: 500,
-      detail: "Order was created but event publication failed"
-    });
-  }
+    })
 
-  return {
-    id: order.id,
-    userId: order.userId,
-    totalAmount: order.totalAmount,
-    status: order.status,
-    isDuplicate: false
+    // 3. Persist the Event to the Outbox table
+    await orderQueries.createOutboxEntry(outboxEntry, client);
+    await client.query('COMMIT');
+
+    return {
+     id: orderId,
+      userId,
+      totalAmount,
+      status: "CREATED",
+      isDuplicate: false
   };
+  }
+  catch (err) {
+    await client.query('ROLLBACK');
+    throw err; // Let the controller/middleware handle the error
+  } finally {
+    client.release();
+  }
+   
+
+
+  
 };
 
 /**
@@ -120,12 +127,14 @@ const getOrdersForUser = async (userId) => {
 };
 
 const handlePaymentCompleted = async(orderId,paymentId) =>{
+   logger.info({ orderId, paymentId }, "Handling payment completion");
   await orderQueries.updateOrderStatus(
     orderId,
     "PAID"
   )
 }
 const handlePaymentFailed = async(orderId,paymentId,reason) =>{
+  logger.warn({ orderId, paymentId, reason }, "Handling payment failure");
   await orderQueries.updateOrderStatus(
     orderId,
     "PAYMENT_FAILED"

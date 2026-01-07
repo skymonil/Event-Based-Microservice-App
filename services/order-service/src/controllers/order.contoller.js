@@ -26,24 +26,18 @@ const createOrder = async (req, res, next) => {
     });
 
     // Idempotent replay → OK
-    if (order.isDuplicate) {
-      logger.info(
-        { orderId: order.id },
-        "Duplicate order request detected"
-      );
+     if (order.isDuplicate) {
+      logger.info({ orderId: order.id }, "Duplicate order detected");
       return res.status(200).json(order);
     }
 
     // Fresh creation → Created
-    logger.info(
-      { orderId: order.id },
-      "Order created successfully"
-    );
-
+    logger.info({ orderId: order.id }, "Order and Outbox event persisted");
     return res.status(201).json(order);
+
   } catch (error) {
     logger.error(error, "Create order failed");
-    next(error);
+    next(error); // Error middleware will handle RFC 7807 formatting
   }
 };
 

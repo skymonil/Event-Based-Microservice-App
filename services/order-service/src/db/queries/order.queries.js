@@ -3,15 +3,27 @@ const db = require("../index");
 /**
  * Create a new order
  */
-const createOrder = async (order) => {
-  const { id, userId, items, totalAmount, status, idempotencyKey  } = order;
+const createOrder = async (order, client = db) => {
+  const { id, userId, items, totalAmount, status, idempotencyKey } = order;
 
-  await db.query(
-    `
-    INSERT INTO orders (id, user_id, items, total_amount, status, idempotency_key)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    `,
-    [id, userId, items, totalAmount, status,idempotencyKey ]
+  await client.query(
+    `INSERT INTO orders (id, user_id, items, total_amount, status, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, userId, JSON.stringify(items), totalAmount, status, idempotencyKey]
+  );
+};
+
+/**
+ * Create an Outbox Entry
+ */
+const createOutboxEntry = async (entry, client = db) => {
+  const { aggregate_type, aggregate_id, event_type, payload, metadata } = entry;
+  
+  // PostgreSQL 'pg' driver will handle objects for JSONB columns automatically
+  await client.query(
+    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [aggregate_type, aggregate_id, event_type, payload, metadata]
   );
 };
 
@@ -71,5 +83,6 @@ module.exports = {
   getOrderById,
   getOrdersByUserId,
   getOrderByIdempotencyKey,
-  updateOrderStatus
+  updateOrderStatus,
+  createOutboxEntry
 };

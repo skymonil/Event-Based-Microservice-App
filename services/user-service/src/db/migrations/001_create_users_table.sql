@@ -1,3 +1,4 @@
+-- migrate:up
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
@@ -5,3 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- migrate:down
+DROP TABLE IF EXISTS users;

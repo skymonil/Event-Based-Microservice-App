@@ -33,7 +33,7 @@ const SERVICE_NAME = "order-service";
 const consumer = kafka.consumer({
   groupId: SERVICE_NAME,
 
-  
+
 
   sessionTimeout: 30000,
   heartbeatInterval: 3000,
@@ -46,7 +46,7 @@ const waitForInfraRecovery = async (topic) => {
       await orderService.healthCheck();
       isInfraHealthy = true;
       console.log("Infra recovered. Resuming consumer.");
-      
+
       // 3.5 Consumer pause metric (Reset to 0 on resume)
       consumerPaused.set({ topic, service: SERVICE_NAME }, 0);
       consumer.resume([{ topic }]);
@@ -58,7 +58,10 @@ const waitForInfraRecovery = async (topic) => {
 };
 
 const startConsumer = async () => {
-  await consumer.connect();
+  let success = false;
+   while (!success) {
+    try {
+    await consumer.connect();
 
   await consumer.subscribe({
     topic: "payment.completed",
@@ -69,6 +72,13 @@ const startConsumer = async () => {
     topic: "payment.failed",
     fromBeginning: false
   });
+      success = true;
+    } catch (err) {
+      console.error("Kafka not ready or topic missing, retrying in 5s...", err.message);
+      await new Promise(res => setTimeout(res, 5000));
+    }
+   }
+  
 
   await consumer.run({
     eachMessage: async ({ message, topic, partition }) => {
@@ -90,27 +100,32 @@ const startConsumer = async () => {
           : 0;
 
         try {
-        await tracer.startActiveSpan(
-  "process payment event",
-  { attributes: { topic } },
-  async (span) => {
-    span.setAttribute("order.id", event.orderId);
-    span.setAttribute("payment.id", event.paymentId);
-    span.setAttribute("kafka.retry_count", retryCount);
+          await tracer.startActiveSpan(
+            `process ${topic} event`,
+            { attributes: { "messaging.topic": topic } },
+            async (span) => {
+              span.setAttribute("order.id", event.orderId);
+              span.setAttribute("payment.id", event.paymentId);
+              span.setAttribute("kafka.retry_count", retryCount);
 
-    await orderService.handlePaymentCompleted(event);
+              // 🔀 ROUTING LOGIC based on Topic
+              if (topic === "payment.completed") {
+                await orderService.handlePaymentCompleted(event.orderId, event.paymentId);
+              } else if (topic === "payment.failed") {
+                await orderService.handlePaymentFailed(event.orderId, event.paymentId, event.reason);
+              }
 
-    span.end();
-  }
-);
+              span.end();
+            }
+          );
         } catch (err) {
           // 🛑 ASYNC CIRCUIT BREAKER
           if (isInfraError(err)) {
             console.error("Infra failure detected. Pausing consumer.");
-            
+
             // 3.5 Consumer pause metric (Set to 1 on pause)
             consumerPaused.set({ topic, service: SERVICE_NAME }, 1);
-            
+
             isInfraHealthy = false;
             consumer.pause([{ topic }]);
             waitForInfraRecovery(topic);
@@ -125,9 +140,9 @@ const startConsumer = async () => {
             });
 
             await exponentialBackoff(retryCount);
-            
+
             // 🔁 Retry
-            await consumer.producer().send({
+            await producer.send({
               topic,
               messages: [
                 {

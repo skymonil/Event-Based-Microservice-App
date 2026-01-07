@@ -15,7 +15,6 @@ pool.on("connect", () => {
 
 pool.on("error", (err) => {
   logger.error("Unexpected PostgreSQL error", err);
-  process.exit(1);
 });
 
 /**
@@ -23,6 +22,14 @@ pool.on("error", (err) => {
  */
 const query = (text, params) => {
   return pool.query(text, params);
+};
+
+
+/**
+ * ADDED: Get a client from the pool for Transactions
+ */
+const connect = () => {
+  return pool.connect();
 };
 
 /**
@@ -35,5 +42,6 @@ const close = async () => {
 
 module.exports = {
   query,
-  close
+  close,
+  connect
 };

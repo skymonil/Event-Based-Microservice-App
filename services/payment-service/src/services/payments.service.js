@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
 const paymentQueries = require("../db/queries/payments.queries");
 const AppError = require("../utils/app-error");
-
+const db = require('../db')
 // Get Payments for an ordeer
 
 const getPaymentsByOrder = async(orderId, userId) => {
@@ -74,9 +74,10 @@ orderId,
 userId,
 amount,
 currency = "INR",
-idempotencyKey
+idempotencyKey,
+traceHeaders = {}
 }) =>{
- // Idempotency Check
+ //1. Idempotency Check
 
  if(idempotencyKey){
     const existing = await paymentQueries.getPaymentByIdempotencyKey(idempotencyKey)
@@ -93,26 +94,67 @@ idempotencyKey
 }
 
 
- //  Mock payment provider
+ //2.  Mock payment provider
 const paymentSucceeded = Math.random() < 0.8;
+const paymentStatus = paymentSucceeded ? "SUCCESS" : "FAILED";
+const eventType = paymentSucceeded ? "payment.completed" : "payment.failed";
 
-const payment = {
-    id: uuidv4(),
+const paymentId = uuidv4();
+const paymentData = {
+    id: paymentId,
     orderId,
     userId,
     amount,
     currency,
-    status: paymentSucceeded ? "SUCCESS" : "FAILED",
+    status: paymentStatus,
     provider: "MOCK",
     idempotencyKey
 }
-await paymentQueries.createPayment(payment);
-  return {
-    id: payment.id,
-    orderId: payment.orderId,
-    status: payment.status,
-    isDuplicate: false
-  };
+
+// 3. TRANSACTIONAL OUTBOX PATTERN
+const client = await db.connect()
+
+try {
+  await client.query('BEGIN');
+
+  //Step A: Create The Payment Record
+  await paymentQueries.createPayment(paymentData,client)
+
+  //Step B: Create The OutBox Entry For Debezium
+
+  const outboxEntry = {
+    aggregate_type: 'PAYMENT',
+      aggregate_id: paymentId,
+      event_type: eventType, // This determines the Kafka Topic
+      payload: {
+        paymentId,
+        orderId,
+        status: paymentStatus,
+        reason: paymentSucceeded ? null : "Insufficient funds (MOCK)"
+      },
+      metadata: { ...traceHeaders } // Propagate tracing forward
+  }
+
+  await paymentQueries.createOutboxEntry(outboxEntry, client);
+
+   await client.query('COMMIT');
+
+   logger.info({ paymentId, orderId, paymentStatus }, "Payment processed and Outbox event saved");
+
+     return {
+      id: paymentId,
+      orderId,
+      status: paymentStatus,
+      isDuplicate: false
+    };
+} catch (err) {
+  if (client) await client.query('ROLLBACK');
+    logger.error({ err, orderId }, "Payment processing transaction failed");
+    throw err;
+}
+finally {
+    client.release();
+  }
 }
 module.exports = {
   getPaymentsByOrder,

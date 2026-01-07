@@ -13,6 +13,7 @@ const {startConsumer} = require('./kafka/consumer')
 const server = http.createServer(app);
 
 (async () => {
+  
   await connectProducer();
  await startConsumer();
   server.listen(config.port, () => {

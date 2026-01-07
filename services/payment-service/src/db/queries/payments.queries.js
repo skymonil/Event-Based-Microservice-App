@@ -3,40 +3,23 @@ const db = require("../index");
 // Create a new payment record
 
 const createPayment = async ({
-  id,
-  orderId,
-  userId,
-  amount,
-  currency,
-  status,
-  provider,
-  idempotencyKey
+  payment, client = db
 }) => {
-  await db.query(
-    `
-    INSERT INTO payments (
-      id,
-      order_id,
-      user_id,
-      amount,
-      currency,
-      status,
-      provider,
-      idempotency_key
-    )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `,[
-        id,
-      orderId,
-      userId,
-      amount,
-      currency,
-      status,
-      provider,
-      idempotencyKey
-    ]
-  )
+  const { id, orderId, userId, amount, currency, status, provider, idempotencyKey } = payment;
+  await client.query(
+    `INSERT INTO payments (id, order_id, user_id, amount, currency, status, provider, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, orderId, userId, amount, currency, status, provider, idempotencyKey]
+  );
 }
+const createOutboxEntry = async (entry, client = db) => {
+  const { aggregate_type, aggregate_id, event_type, payload, metadata } = entry;
+  await client.query(
+    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [aggregate_type, aggregate_id, event_type, payload, metadata]
+  );
+};
 
 // Get payments by order ID
 const getPaymentsByOrderId = async (orderId) => {
@@ -83,5 +66,6 @@ module.exports = {
   getPaymentsByOrderId,
   getPaymentsByUserId,
   getPaymentByIdempotencyKey,
-  createPayment
+  createPayment,
+  createOutboxEntry
 }

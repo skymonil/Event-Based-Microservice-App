@@ -3,11 +3,11 @@ const{ Partitioners }= require('kafkajs')
 const kafka = require('./kafka')
 const { context, propagation } = require("@opentelemetry/api");
 const producer = kafka.producer({
-  allowAutoTopicCreation: false,
+  allowAutoTopicCreation: true,
   idempotent: true,          // 👈 VERY important
   maxInFlightRequests: 5,
   transactionTimeout: 30000,
-createPartitioner: Partitioners.DefaultPartitioner}
+}
 );
 
 const connectProducer = async() => {

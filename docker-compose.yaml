@@ -1,6 +1,27 @@
 services:
+  # =======================
+  # INFRASTRUCTURE
+  # =======================
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    command: ["postgres", "-c", "wal_level=logical"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   kafka:
-    image: apache/kafka:4.1.1
+    image: apache/kafka:latest
     container_name: kafka
     ports:
       - "9092:9092"
@@ -8,31 +29,40 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-
-      # LISTENERS
-      KAFKA_LISTENERS: >
-        PLAINTEXT://0.0.0.0:9092,
-        PLAINTEXT_INTERNAL://0.0.0.0:29092,
-        CONTROLLER://0.0.0.0:9093
-
-      # ADVERTISED LISTENERS (THIS IS THE KEY)
-      KAFKA_ADVERTISED_LISTENERS: >
-        PLAINTEXT://localhost:9092,
-        PLAINTEXT_INTERNAL://kafka:29092
-
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >
-        PLAINTEXT:PLAINTEXT,
-        PLAINTEXT_INTERNAL:PLAINTEXT,
-        CONTROLLER:PLAINTEXT
-
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
-
-      # Single-node dev settings
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+  connect:
+    image: debezium/connect:2.7.3.Final
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -41,7 +71,75 @@ services:
       - "8080:8080"
     depends_on:
       - kafka
+      - connect
     environment:
       KAFKA_CLUSTERS_0_NAME: local-kafka
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+
+  # =======================
+  # MICROSERVICES
+  # =======================
+  user-service:
+    build: ./services/user-service
+    container_name: user-service
+    volumes:
+      - ./services/user-service:/app
+      - /app/node_modules
+    env_file:
+      - ./services/user-service/.env
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    volumes:
+      - ./services/order-service:/app
+      - /app/node_modules
+    env_file:
+      - ./services/order-service/.env
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "3001:3001"
+
+  payment-service:
+    build: ./services/payment-service
+    container_name: payment-service
+    volumes:
+      - ./services/payment-service:/app
+      - /app/node_modules
+    env_file:
+      - ./services/payment-service/.env
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "3002:3002"
+
+# =======================
+# VOLUMES (The Fix)
+# =======================
+volumes:
+  pgdata:

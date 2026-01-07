@@ -1,7 +1,7 @@
 const kafka = require('./kafka')
 const {Partitioners} = require('kafkajs')
 const producer = kafka.producer({
-  allowAutoTopicCreation: false,
+  allowAutoTopicCreation: true,
   idempotent: true,          // 👈 VERY important
   maxInFlightRequests: 5,
   transactionTimeout: 30000,

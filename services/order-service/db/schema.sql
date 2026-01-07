@@ -1,4 +1,4 @@
-\restrict ClQEOvGhgJ1Rf4MGhRrOVH18Lfcklbwoql3xBpmYepAu2rHXJuGds4e2kkcVgaG
+\restrict v4a6x6Nc3icKr9CC0wpsnKd3Haqg06cqK2CRuGVtVJohOO5iahJ1aYWGV8d8qcR
 
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
@@ -14,6 +14,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
 
 SET default_tablespace = '';
 
@@ -31,6 +45,22 @@ CREATE TABLE public.orders (
     created_at timestamp without time zone,
     idempotency_key text,
     items jsonb NOT NULL
+);
+
+
+--
+-- Name: outbox; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.outbox (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    aggregate_type character varying(255) NOT NULL,
+    aggregate_id character varying(255) NOT NULL,
+    event_type character varying(255) NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    processed_at timestamp with time zone
 );
 
 
@@ -60,6 +90,14 @@ ALTER TABLE ONLY public.orders
 
 
 --
+-- Name: outbox outbox_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.outbox
+    ADD CONSTRAINT outbox_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -68,10 +106,24 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: idx_outbox_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_outbox_created_at ON public.outbox USING btree (created_at);
+
+
+--
+-- Name: dbz_publication; Type: PUBLICATION; Schema: -; Owner: -
+--
+
+CREATE PUBLICATION dbz_publication FOR ALL TABLES WITH (publish = 'insert, update, delete, truncate');
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ClQEOvGhgJ1Rf4MGhRrOVH18Lfcklbwoql3xBpmYepAu2rHXJuGds4e2kkcVgaG
+\unrestrict v4a6x6Nc3icKr9CC0wpsnKd3Haqg06cqK2CRuGVtVJohOO5iahJ1aYWGV8d8qcR
 
 
 --
@@ -81,4 +133,5 @@ ALTER TABLE ONLY public.schema_migrations
 INSERT INTO public.schema_migrations (version) VALUES
     ('001'),
     ('002'),
-    ('003');
+    ('003'),
+    ('004');

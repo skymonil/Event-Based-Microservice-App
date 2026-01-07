@@ -34,7 +34,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "migrate": "dbmate -d \"src/db/migrations\" up up",
+    "migrate": "dbmate -d \"src/db/migrations\" up ",
     "migrate:down": "dbmate down"
   },
   "keywords": [],

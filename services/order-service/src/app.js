@@ -7,7 +7,7 @@ const errorHandler = require("./middleware/error.middleware");
 const { httpRequestDuration } = require("./metrics");
 const app = express();
 const { register } = require("./metrics");
-
+const {logger} = require('./utils/logger')
 // Security headers
 app.use(helmet());
 
@@ -38,9 +38,27 @@ app.get("/metrics", async (req, res) => {
 // 🔹 Request ID middleware (FIRST)
 app.use(requestIdMiddleware);
 
-// Health check (important for Kubernetes)
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "UP" });
+/**
+ * Liveness Probe: Is the process running?
+ * If this returns a non-200, K8s kills the Pod.
+ */
+app.get('/health/live', (req, res) => {
+  res.status(200).send('OK');
+});
+
+/**
+ * Readiness Probe: Is the DB reachable?
+ * If this returns a non-200, K8s stops sending traffic but keeps the Pod alive.
+ */
+app.get('/health/ready', async (req, res) => {
+  try {
+    // We use a very lightweight query to check the pulse
+    await db.query('SELECT 1');
+    res.status(200).send('Ready');
+  } catch (err) {
+    logger.error({ err }, "Readiness check failed: Database unreachable");
+    res.status(503).send('Service Unavailable');
+  }
 });
 
 // Routes

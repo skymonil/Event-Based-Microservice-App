@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/index.js",
+    "dev": "nodemon -L src/index.js",
     "start": "node src/index.js",
-    "migrate": "dbmate up",
+    "migrate": "dbmate -d \"src/db/migrations\" up ",
     "migrate:down": "dbmate down"
   },
   "keywords": [],

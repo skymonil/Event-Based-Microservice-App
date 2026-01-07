@@ -14,8 +14,12 @@ pool.on("connect", () => {
 });
 
 pool.on("error", (err) => {
-  logger.error("Unexpected PostgreSQL error", err);
-  process.exit(1);
+  // Log the error so you can see it in Datadog/CloudWatch
+  logger.error({ err }, "Unexpected PostgreSQL idle client error");
+  
+  // Do NOT process.exit(1) here. 
+  // The 'pg' pool will automatically attempt to create new clients 
+  // when the next query comes in.
 });
 
 /**
@@ -23,6 +27,13 @@ pool.on("error", (err) => {
  */
 const query = (text, params) => {
   return pool.query(text, params);
+};
+
+/**
+ * ADDED: Get a client from the pool for Transactions
+ */
+const connect = () => {
+  return pool.connect();
 };
 
 /**
@@ -35,5 +46,6 @@ const close = async () => {
 
 module.exports = {
   query,
-  close
+  close,
+  connect
 };

@@ -7,10 +7,7 @@ const {
 const kafka = require('./kafka');
 const paymentService = require('../services/payments.service');
 const { logger } = require('../utils/logger');
-const {
-  publishPaymentCompleted,
-  publishPaymentFailed
-} = require('./producer');
+const producer = kafka.producer(); 
 const { sendToDLQ } = require('./dlq.producer');
 const { exponentialBackoff } = require("../utils/backoff");
 
@@ -26,25 +23,49 @@ const consumer = kafka.consumer({
 });
 
 const startConsumer = async () => {
-  await consumer.connect();
+  let success = false;
 
-  await consumer.subscribe({
-    topic: "order.created",
-    fromBeginning: false
-  });
+  // 🔄 RETRY LOOP: Keep trying to connect until Kafka is ready
+  while (!success) {
+    try {
+      logger.info("Attempting to connect to Kafka...");
+      
+      await consumer.connect();
+      await producer.connect(); // Ensure producer is also ready for retries
 
+      // Subscribe to all required topics
+      // Note: order.created is your main input topic
+      await consumer.subscribe({ topic: "order.created", fromBeginning: true });
+      
+      // Subscribing to your status topics
+      
+
+      logger.info("Successfully connected to Kafka and subscribed to topics");
+      success = true;
+    } catch (err) {
+      logger.error(`Kafka not ready or topic missing: ${err.message}. Retrying in 5s...`);
+      // Wait 5 seconds before next attempt
+      await new Promise(res => setTimeout(res, 5000));
+    }
+  }
+
+  // Once connected, start the message processing loop
   await consumer.run({
     eachMessage: async ({ topic, message }) => {
-      // 3.2 Increment “messages consumed”
-      kafkaMessagesConsumed.inc({
-        topic,
-        service: SERVICE_NAME
-      });
+      // ... rest of your logic remains the same ...
+      kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
-      // 2️⃣ EXTRACT: Get the trace context from incoming Kafka headers
+      const sanitizedHeaders = {};
+      if (message.headers) {
+        Object.keys(message.headers).forEach(key => {
+          if (message.headers[key] !== null && message.headers[key] !== undefined) {
+            sanitizedHeaders[key] = message.headers[key];
+          }
+        });
+      }
+
       const extractedContext = propagation.extract(context.active(), message.headers);
 
-      // 3️⃣ WRAP: Execute logic inside the extracted context
       await context.with(extractedContext, async () => {
         const event = JSON.parse(message.value.toString());
         const retryCount = message.headers?.["x-retry-count"] 
@@ -52,35 +73,17 @@ const startConsumer = async () => {
           : 0;
 
         try {
-          // 4️⃣ START SPAN: Record the specific processing action
           await tracer.startActiveSpan(
             "process order event",
             { attributes: { topic, "order.id": event.orderId } },
             async (span) => {
-              const result = await paymentService.processPayment({
+              await paymentService.processPayment({
                 orderId: event.orderId,
                 userId: event.userId,
                 amount: event.totalAmount,
-                idempotencyKey: event.idempotencyKey
+                idempotencyKey: event.idempotencyKey,
+                traceHeaders: message.headers 
               });
-
-              if (result.status === "SUCCESS") {
-                await publishPaymentCompleted({
-                  orderId: event.orderId,
-                  paymentId: result.id,
-                  amount: event.totalAmount,
-                  status: "SUCCESS",
-                  createdAt: new Date().toISOString()
-                });
-              } else {
-                await publishPaymentFailed({
-                  orderId: event.orderId,
-                  paymentId: result.id,
-                  status: "FAILED",
-                  reason: "Mock payment failure",
-                  createdAt: new Date().toISOString()
-                });
-              }
               span.end();
             }
           );
@@ -101,20 +104,32 @@ const startConsumer = async () => {
           if (retryCount < MAX_RETRIES) {
             kafkaRetries.inc({ topic, service: SERVICE_NAME });
             await exponentialBackoff(retryCount);
-
-            await consumer.producer().send({
-              topic,
-              messages: [
-                {
+            
+            const sanitizedHeadersForRetry = {};
+            if (message.headers) {
+              for (const [key, value] of Object.entries(message.headers)) {
+                if (value !== null && value !== undefined) {
+                  sanitizedHeadersForRetry[key] = Buffer.isBuffer(value) ? value : String(value);
+                }
+              }
+            }
+            
+            try {
+              await producer.send({
+                topic,
+                messages: [{
                   key: message.key,
                   value: message.value,
                   headers: {
-                    ...message.headers, // Important: spread headers to keep trace context
+                    ...sanitizedHeadersForRetry,
                     "x-retry-count": Buffer.from(String(retryCount + 1))
                   }
-                }
-              ]
-            });
+                }]
+              });
+            } catch (produceError) {
+              logger.error({ produceError }, "Failed to send retry message");
+              await sendToDLQ({ topic, message, error: produceError });
+            }
           } else {
             kafkaDLQ.inc({ topic, service: SERVICE_NAME });
             await sendToDLQ({ topic, message, error: err });
