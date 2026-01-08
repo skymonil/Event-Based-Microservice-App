@@ -3,6 +3,8 @@ const orderQueries = require("../db/queries/order.queries");
 const { prepareOrderCreatedEvent } = require("../kafka/producer");
 const AppError = require("../utils/app-error");
 const db = require("../db"); // Import the DB pool to start transactions
+const {logger} = require('../utils/logger');
+
 /**
  * Create a new order
  */

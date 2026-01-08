@@ -2,10 +2,10 @@ const { v4: uuidv4 } = require("uuid");
 const paymentQueries = require("../db/queries/payments.queries");
 const AppError = require("../utils/app-error");
 const db = require('../db');
-const logger = require("../utils/logger");
+const {logger} = require("../utils/logger");
 
 const getPaymentsByOrder = async(orderId, userId) => {
-    const payments = await paymentQueries.getPyamentsByOrderId(orderId)
+    const payments = await paymentQueries.getPaymentsByOrderId(orderId)
 
     if(!payments.length){
          throw new AppError({
@@ -69,92 +69,66 @@ if(payments[0].user_id !== userId){
 }
 
 // Process payment for an order (called by Kafka consumer)
-const processPayment = async ({
-  orderId,
-  userId,
-  amount,
-  currency = "INR",
-  idempotencyKey,
-  traceHeaders = {}
-}) => {
-  // 1. Idempotency Check
-  if (idempotencyKey) {
-    const existing = await paymentQueries.getPaymentByIdempotencyKey(idempotencyKey);
-    if (existing) {
-      return {
-        id: existing.id,
-        orderId: existing.order_id,
-        status: existing.status,
-        isDuplicate: true
-      };
-    }
+const processPayment = async ({ orderId, userId, amount, currency = "INR", traceHeaders = {} }) => {
+  // 1️⃣ Idempotency: Check if array has content
+  const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
+  if (existingRows && existingRows.length > 0) {
+    const existing = existingRows[0];
+    return { id: existing.id, orderId, status: existing.status, isDuplicate: true };
   }
 
-  // 2. Mock payment provider logic
-  const paymentSucceeded = Math.random() < 0.8;
+  // 2️⃣ Deterministic Decision (Excellent choice for Kafka)
+  const paymentSucceeded = parseInt(orderId.replace(/-/g, "").slice(0, 2), 16) % 2 === 0;
   const paymentStatus = paymentSucceeded ? "SUCCESS" : "FAILED";
   const eventType = paymentSucceeded ? "payment.completed" : "payment.failed";
-
   const paymentId = uuidv4();
-  const paymentData = {
-    id: paymentId,
-    orderId,
-    userId,
-    amount,
-    currency,
-    status: paymentStatus,
-    provider: "MOCK",
-    idempotencyKey
-  };
 
-  // 3. TRANSACTIONAL OUTBOX PATTERN
   const client = await db.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
-    // Step A: Create The Payment Record
-    // Pass paymentData directly to match the refactored query function
-    await paymentQueries.createPayment(paymentData, client);
-
-    // Step B: Create The Outbox Entry For Debezium
-    const outboxEntry = {
-      aggregate_type: 'PAYMENT',
-      aggregate_id: orderId, // Use orderId as aggregate_id so Order Service can easily match
-      event_type: eventType,
-      payload: {
-        paymentId,
+    await paymentQueries.createPayment({
+        id: paymentId,
         orderId,
         userId,
         amount,
+        currency,
         status: paymentStatus,
-        reason: paymentSucceeded ? null : "Insufficient funds (MOCK)"
-      },
-      metadata: { ...traceHeaders }
-    };
+        provider: "MOCK"
+      }, client);
 
-    await paymentQueries.createOutboxEntry(outboxEntry, client);
+    await paymentQueries.createOutboxEntry({
+    aggregate_type: "PAYMENT",
+    aggregate_id: orderId,
+    event_type: eventType,
+    payload: { paymentId, orderId, userId, amount, status: paymentStatus },
+    metadata: traceHeaders
+}, client);
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
 
-    logger.info({ paymentId, orderId, paymentStatus }, "Payment processed and Outbox event saved");
+    return { id: paymentId, orderId, status: paymentStatus, isDuplicate: false };
 
-    return {
-      id: paymentId,
-      orderId,
-      status: paymentStatus,
-      isDuplicate: false
-    };
   } catch (err) {
-    if (client) await client.query('ROLLBACK');
-    logger.error({ err, orderId }, "Payment processing transaction failed");
+    if (client) await client.query("ROLLBACK");
+
+    // 🛡️ Handle Race Condition: Unique Violation (order_id constraint)
+    if (err.code === '23505') {
+      logger.warn({ orderId }, "Race condition handled: Payment already exists");
+      const confirmed = await paymentQueries.getPaymentsByOrderId(orderId);
+      return { id: confirmed[0].id, orderId, status: confirmed[0].status, isDuplicate: true };
+    }
+
     throw err;
   } finally {
     client.release();
   }
 };
+
 module.exports = {
   getPaymentsByOrder,
   getPaymentsForUser,
-  processPayment
+  processPayment,
+  
 };

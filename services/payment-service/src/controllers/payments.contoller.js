@@ -1,5 +1,5 @@
 // src/controllers/user.controller.js
-const logger = require("../utils/logger");
+const {logger }= require("../utils/logger");
 const { getRequestLogger } = require("../utils/logger");
 const paymentService = require('../services/payments.service')
 

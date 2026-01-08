@@ -1,6 +1,6 @@
 const { getRequestLogger } = require("../utils/logger");
 const orderService = require("../services/order.service");
-
+const {logger} = require('../utils/logger')
 /**
  * Create a new order
  */
