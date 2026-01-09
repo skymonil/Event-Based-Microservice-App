@@ -85,8 +85,38 @@ const getOrdersForUser = async (req, res, next) => {
   }
 };
 
+const cancelOrder = async(req, res, next) =>{
+  try {
+   const { id: orderId } = req.params; ;
+    const userId = req.user.userId;
+    const idempotencyKey = req.headers["idempotency-key"];
+
+     if (!idempotencyKey) {
+    return res.status(400).json({
+      error: "Idempotency key is required"
+    });
+  }
+
+    const result = await orderService.cancelOrder({
+      orderId,
+      userId,
+      idempotencyKey
+    })
+    res.status(202).json(result);
+    
+    next();
+  } catch (error) {
+     logger.error({ error: error.message, stack: error.stack }, "Cancel Order Controller Error");
+    
+    return res.status(error.status || 500).json({
+      error: error.detail || error.message || "Internal Server Error"
+  })
+}
+}
+
 module.exports = {
   createOrder,
   getOrderById,
-  getOrdersForUser
+  getOrdersForUser,
+  cancelOrder
 };

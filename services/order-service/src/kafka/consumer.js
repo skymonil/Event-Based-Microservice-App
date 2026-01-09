@@ -8,7 +8,7 @@ const kafka = require("./kafka");
 const orderService = require("../services/order.service");
 const { sendToDLQ } = require("./dlq.producer");
 const { context, propagation, trace } = require("@opentelemetry/api");
-
+const {}= require('../db/queries/order.queries')
 const tracer = trace.getTracer("order-service");
 const SERVICE_NAME = "order-service";
 
@@ -31,8 +31,10 @@ const startConsumer = async () => {
   while (!connected) {
     try {
       await consumer.connect();
-      await consumer.subscribe({ topic: "payment.completed", fromBeginning: false });
-      await consumer.subscribe({ topic: "payment.failed", fromBeginning: false });
+      await consumer.subscribe({
+        topics: ["payment.failed", "payment.completed", "payment.refunded"], 
+        fromBeginning: false
+      });
       connected = true;
       console.log("✅ Order-Service Consumer Subscribed");
     } catch (err) {
@@ -42,46 +44,71 @@ const startConsumer = async () => {
   }
 
   await consumer.run({
-    eachMessage: async ({ topic, message }) => {
-      kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
+  eachMessage: async ({ topic, message }) => {
+    kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
-      const extractedContext = propagation.extract(context.active(), message.headers);
+    const event = JSON.parse(message.value.toString());
 
-      await context.with(extractedContext, async () => {
-        const event = JSON.parse(message.value.toString());
+    // ✅ ALWAYS extract payload this way
+    
 
-        try {
-          await tracer.startActiveSpan(`process ${topic}`, async (span) => {
-            if (topic === "payment.completed") {
-              await orderService.handlePaymentCompleted(event.orderId, event.paymentId);
-            } else if (topic === "payment.failed") {
-              await orderService.handlePaymentFailed(event.orderId, event.paymentId, event.reason);
-            }
-            span.end();
-          });
-        } catch (err) {
-          if (isInfraError(err)) {
-            console.error("🚨 Infrastructure error. Pausing consumer for 10s.");
-            consumerPaused.set({ topic, service: SERVICE_NAME }, 1);
-            consumer.pause([{ topic }]);
+   
+  
 
-            // 🔄 Simple Resume Logic
-            setTimeout(() => {
-              console.log("🔄 Attempting to resume consumer...");
-              consumer.resume([{ topic }]);
-              consumerPaused.set({ topic, service: SERVICE_NAME }, 0);
-            }, 10000); 
-            
-            throw err; // Re-throw to let KafkaJS handle the retry/offset
+    // ✅ Restore trace context
+    const extractedContext = propagation.extract(
+      context.active(),
+      message.headers || {}
+    );
+
+    await context.with(extractedContext, async () => {
+      try {
+        await tracer.startActiveSpan(`process ${topic}`, async (span) => {
+          span.setAttribute("order.id", event.orderId);
+          span.setAttribute("payment.id", event.paymentId);
+
+          if (topic === "payment.completed") {
+            await orderService.handlePaymentCompleted(
+              event.orderId,
+              event.paymentId
+            );
+          } 
+          else if (topic === "payment.failed") {
+            await orderService.handlePaymentFailed(
+              event.orderId,
+              event.paymentId,
+              event.reason
+            );
+          } 
+          else if (topic === "payment.refunded") {
+            await orderService.handlePaymentRefunded({
+              orderId: event.orderId,
+              paymentId: event.paymentId,
+              traceHeaders: message.headers || {}
+            });
           }
 
-          // Business error: Send to DLQ
-          kafkaDLQ.inc({ topic, service: SERVICE_NAME });
-          await sendToDLQ({ topic, message, error: err });
-        }
-      });
-    }
-  });
-};
+          span.end();
+        });
+      } catch (err) {
+        if (isInfraError(err)) {
+          consumerPaused.set({ topic, service: SERVICE_NAME }, 1);
+          consumer.pause([{ topic }]);
 
-module.exports = { startConsumer };
+          setTimeout(() => {
+            consumer.resume([{ topic }]);
+            consumerPaused.set({ topic, service: SERVICE_NAME }, 0);
+          }, 10000);
+
+          throw err;
+        }
+
+        kafkaDLQ.inc({ topic, service: SERVICE_NAME });
+        await sendToDLQ({ topic, message, error: err });
+      }
+    });
+  }
+});
+}
+
+module.exports = { startConsumer }

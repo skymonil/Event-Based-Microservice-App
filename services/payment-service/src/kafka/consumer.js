@@ -30,7 +30,7 @@ const startConsumer = async () => {
       await consumer.connect();
 
       await consumer.subscribe({
-        topic: "order.created",
+        topics: ["order.created", "order.cancel.requested"], 
         fromBeginning: false
       });
 
@@ -48,20 +48,24 @@ const startConsumer = async () => {
     eachMessage: async ({ topic, message, partition }) => {
       kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
+      // Parse the message value
+      const event = JSON.parse(message.value.toString())
+     
+      // 2. 🛰️ Context Extraction from Metadata (instead of Kafka Headers)
+      // Because Debezium puts your metadata inside the JSON payload
       const extractedContext = propagation.extract(
         context.active(),
         message.headers || {}
       );
 
       await context.with(extractedContext, async () => {
-        const event = JSON.parse(message.value.toString());
-
         let attempt = 0;
 
         while (attempt <= MAX_RETRIES) {
           try {
+            const spanName = `process ${topic}`
             await tracer.startActiveSpan(
-              "process order.created",
+              spanName,
               {
                 attributes: {
                   "messaging.topic": topic,
@@ -69,12 +73,25 @@ const startConsumer = async () => {
                 }
               },
               async (span) => {
-                await paymentService.processPayment({
-                  orderId: event.orderId,
-                  userId: event.userId,
-                  amount: event.totalAmount,
-                  idempotencyKey: event.idempotencyKey
-                });
+                 // 3. 🧭 ROUTING LOGIC
+                if (topic === "order.created") {
+                  await paymentService.processPayment({
+                    orderId: event.orderId,
+                    userId: event.userId,
+                    amount: event.totalAmount,
+                    idempotencyKey: event.idempotencyKey,
+                    traceHeaders: event.metadata // Pass headers for downstream outbox
+                  });
+                } 
+                else if (topic === "order.cancel.requested") {
+                  // New logic to handle the Refund
+                  await paymentService.processRefund({
+                    orderId: event.orderId,
+                    userId: event.userId,
+                    idempotencyKey: event.idempotencyKey,
+                    traceHeaders: event.metadata
+                  });
+                }
                 span.end();
               }
             );

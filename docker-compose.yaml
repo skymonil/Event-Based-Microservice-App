@@ -118,6 +118,16 @@ services:
         condition: service_started
     ports:
       - "3001:3001"
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
 
   payment-service:
     build: ./services/payment-service
@@ -138,8 +148,33 @@ services:
     ports:
       - "3002:3002"
 
+  # =======================
+  # INITIALIZATION
+  # =======================
+  connector-init:
+    image: curlimages/curl:latest
+    container_name: connector-init
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Waiting for Kafka Connect to start...';
+        while [ \$(curl -s -o /dev/null -w '%{http_code}' http://connect:8083/connectors) -ne 200 ]; do
+          sleep 5;
+        done;
+        echo 'Kafka Connect is up! Registering connectors...';
+        for f in /scripts/*.json; do
+          echo \"Registering \$$f...\";
+          curl -X POST -H 'Content-Type: application/json' --data @\$$f http://connect:8083/connectors;
+          echo \"\n\";
+        done;
+        echo 'All connectors processed. Success!';"
+    depends_on:
+      connect:
+        condition: service_started
+
 # =======================
-# VOLUMES (The Fix)
+# VOLUMES
 # =======================
 volumes:
   pgdata:

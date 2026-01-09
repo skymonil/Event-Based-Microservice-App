@@ -20,11 +20,13 @@ const createOutboxEntry = async (entry, client = db) => {
   const { aggregate_type, aggregate_id, event_type, payload, metadata } = entry;
   
   // PostgreSQL 'pg' driver will handle objects for JSONB columns automatically
-  await client.query(
+  const result = await client.query(
     `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata)
-     VALUES ($1, $2, $3, $4, $5)`,
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, created_at`,
     [aggregate_type, aggregate_id, event_type, payload, metadata]
-  );
+  )
+  return result.rows[0];;
 };
 
 /**
@@ -78,11 +80,47 @@ const updateOrderStatus = async(orderId, status)=> {
   )
 }
 
+const getOrderForUpdate = async(orderId, client) =>{
+  const res = await client.query(`
+    SELECT * FROM orders where id = $1 FOR UPDATE`,
+    [orderId]
+    )
+     return res.rows[0];
+}
+
+const markCancelled = async (orderId, key, client) => {
+  await client.query(
+    `
+    UPDATE orders
+    SET status = 'CANCELLED',
+        cancelled_at = NOW(),
+        cancel_idempotency_key = $2
+    WHERE id = $1
+    `,
+    [orderId, key]
+  );
+};
+
+const markCancelRequested = async (orderId, key, client) => {
+  await client.query(
+    `
+    UPDATE orders
+    SET status = 'CANCEL_REQUESTED',
+        cancel_idempotency_key = $2
+    WHERE id = $1
+    `,
+    [orderId, key]
+  );
+};
+
 module.exports = {
   createOrder,
   getOrderById,
   getOrdersByUserId,
+  getOrderForUpdate,
   getOrderByIdempotencyKey,
   updateOrderStatus,
-  createOutboxEntry
+  createOutboxEntry,
+  markCancelled,
+  markCancelRequested
 };

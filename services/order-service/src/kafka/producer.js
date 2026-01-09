@@ -22,7 +22,7 @@ const prepareOrderCreatedEvent = (event) => {
     metadata: {
       ...traceHeaders,
       'x-request-id': event.requestId,
-      'x-idempotency-key': event.idempotencyKey,
+      'idempotency-key': event.idempotencyKey,
     }
   };
 };

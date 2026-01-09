@@ -23,7 +23,7 @@ const createOutboxEntry = async (entry, client = db) => {
 };
 
 
-// Get payments by order ID
+// Get all payments for an order (For API/UI)
 const getPaymentsByOrderId = async (orderId) => {
   const { rows } = await db.query(
     `
@@ -37,7 +37,7 @@ const getPaymentsByOrderId = async (orderId) => {
   return rows;
 }
 
-// Get Payments for a user
+// Get all Payments for a user
 const getPaymentsByUserId = async (userId) => {
   const { rows } = await db.query(
     `
@@ -64,10 +64,40 @@ const getPaymentByIdempotencyKey = async (idempotencyKey) => {
   return rows[0];
 }
 
+/**
+ * Get the most recent payment for an order (For Service Logic)
+ * Uses FOR UPDATE to lock the row during a refund/status change
+ */
+const getPaymentsByOrder = async (orderId) => {
+  const { rows } = await db.query(
+    `
+    Select * 
+    FROM payments
+    WHERE order_id = $1
+    ORDER BY created_at DESC
+    `,
+    [orderId]
+  )
+  return rows;
+}
+
+/**
+ * Update payment status to REFUNDED
+ */
+const markRefunded = async (paymentId, client = db) => {
+  await client.query(
+    `UPDATE payments SET status = 'REFUNDED', updated_at = NOW() WHERE id = $1`,
+    [paymentId]
+  );
+};
+
 module.exports = {
   getPaymentsByOrderId,
   getPaymentsByUserId,
   getPaymentByIdempotencyKey,
   createPayment,
-  createOutboxEntry
+  createOutboxEntry,
+  getPaymentsByOrder,
+  markRefunded,
+  getPaymentsByOrder
 }

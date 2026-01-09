@@ -74,10 +74,6 @@ const createOrder = async ({
   } finally {
     client.release();
   }
-   
-
-
-  
 };
 
 /**
@@ -114,6 +110,88 @@ const getOrderById = async (orderId, userId) => {
   };
 };
 
+const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) => {
+  
+  const client = await db.connect()
+  const logContext = { orderId, userId, idempotencyKey };
+
+  try {
+    await client.query("BEGIN");
+    
+    // 1. Lock the row to prevent race conditions during status changes
+    const order = await orderQueries.getOrderForUpdate(orderId, client);
+
+    if(!order) {
+      logger.warn(logContext, "Cancellation failed: Order not found");
+      throw new AppError({status: 404, detail: "Order not found"})}
+
+    if(order.user_id !== userId){
+       logger.error(logContext, "Security Alert: User attempted to cancel an order they do not own");
+       throw new AppError({ status: 403, detail: "Forbidden" });}
+
+     // 🔁 Idempotency
+    if (order.cancel_idempotency_key === idempotencyKey) {
+      await client.query("COMMIT");
+       logger.info(logContext, "Idempotent cancellation request handled");
+      return { orderId, status: order.status, duplicate: true };
+    }
+
+    // ⏱ Cancellation window check
+    if (new Date() > order.cancellable_until) {
+      logger.warn({ ...logContext, cancellableUntil: order.cancellable_until }, "Cancellation rejected: Window expired");
+      throw new AppError({ status: 409, detail: "Cancellation window expired" });
+    }
+
+    let finalStatus;
+    let eventType;
+
+     if (order.status === "CREATED" || order.status == "PAYMENT_FAILED") {
+
+      finalStatus = "CANCELLED";
+      eventType = "order.cancelled"
+      await orderQueries.markCancelled(orderId, idempotencyKey, client);
+      logger.info(logContext, `Order state ${order.status} -> CANCELLED (No refund needed)`);
+     }
+    else if (order.status === "PAID") {
+
+       /**
+       * CASE: User paid. 
+       * We move to CANCELLING and trigger the Refund Saga.
+       */
+      finalStatus = "CANCELLING"; // Better than CANCEL_REQUESTED for state clarity
+      eventType = "order.cancel.requested";
+
+      await orderQueries.markCancelRequested(orderId, idempotencyKey, client);
+      logger.info(logContext, "Order state PAID -> CANCELLING (Refund Saga triggered)");
+
+    }
+     else {
+      logger.warn({ ...logContext, currentStatus: order.status }, "Cancellation rejected: Invalid state");
+      throw new AppError({
+        status: 409,
+        detail: `Cannot cancel order in state ${order.status}`
+      });
+    }
+
+    await orderQueries.createOutboxEntry({
+      aggregate_type: "ORDER",
+      aggregate_id: orderId,
+      event_type: eventType,
+      payload: { orderId, userId,reason: "USER_CANCELLED" ,originalStatus: order.status },
+      metadata: { ...traceHeaders, "idempotency-key": idempotencyKey }
+    }, client);
+
+   await client.query("COMMIT");
+ return { orderId, status: finalStatus, duplicate: false };
+
+  } catch (err) {
+     await client.query("ROLLBACK");
+    throw err;
+  } finally{
+    client.release()
+  }
+}
+
 /**
  * Get all orders for a user
  */
@@ -147,11 +225,40 @@ const healthCheck = async () => {
   await orderQueries.ping(); // SELECT 1
 };
 
+const handlePaymentRefunded = async({orderId, traceHeaders}) =>{
+  const client = await db.connect();
+  try {
+    
+    await client.query("BEGIN")
+
+    // 1. Update Order Status to final CANCELLED
+    await orderQueries.markRefunded(orderId, client);
+    // 2. Insert into Outbox (so other services know it's fully done)
+    await orderQueries.createOutboxEntry({
+      aggregate_type: "ORDER",
+      aggregate_id: orderId,
+      event_type: "order.refunded",
+      payload: { orderId, status: "CANCELLED" },
+      metadata: traceHeaders
+    }, client);
+    
+    await client.query("COMMIT");
+    logger.info({ orderId }, "Order successfully marked as REFUNDED/CANCELLED");
+  } catch (err) {
+     await client.query("ROLLBACK");
+    throw err;
+  }finally{
+    client.release()
+  }
+}
+
 module.exports = {
   createOrder,
   getOrderById,
   getOrdersForUser,
   handlePaymentCompleted,
   handlePaymentFailed,
-  healthCheck
+  healthCheck,
+  handlePaymentRefunded,
+  cancelOrder
 };
