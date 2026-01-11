@@ -86,7 +86,7 @@ const getPaymentsByOrder = async (orderId) => {
  */
 const markRefunded = async (paymentId, client = db) => {
   await client.query(
-    `UPDATE payments SET status = 'REFUNDED', updated_at = NOW() WHERE id = $1`,
+    `UPDATE payments SET status = 'REFUNDED' WHERE id = $1`,
     [paymentId]
   );
 };
@@ -98,6 +98,5 @@ module.exports = {
   createPayment,
   createOutboxEntry,
   getPaymentsByOrder,
-  markRefunded,
-  getPaymentsByOrder
+  markRefunded
 }

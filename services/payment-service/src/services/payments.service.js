@@ -2,30 +2,33 @@ const { v4: uuidv4 } = require("uuid");
 const paymentQueries = require("../db/queries/payments.queries");
 const AppError = require("../utils/app-error");
 const db = require('../db');
-const {logger} = require("../utils/logger");
+const { logger } = require("../utils/logger");
 
-const getPaymentsByOrder = async(orderId, userId) => {
-    const payments = await paymentQueries.getPaymentsByOrderId(orderId)
+const getPaymentsByOrder = async (orderId, userId) => {
+  const payments = await paymentQueries.getPaymentsByOrderId(orderId);
 
-    if(!payments.length){
-         throw new AppError({
-      type: "https://payment-service/problems/payments-not-found",
-      title: "Not Found",
-      status: 404,
-      detail: "No payments found for this order"
-    });
-    }
+  // FIX 1: Corrected logic flow. 
+  // Previously, you logged info if empty, but then immediately tried to access payments[0], which would crash.
+  if (!payments || !payments.length) {
+    logger.info(
+      { orderId, userId },
+      "No payments found for order — likely cancelled or payment not required"
+    );
+    return []; // Return empty array instead of proceeding to crash
+  }
 
-    if(payments[0].user_id !== userId){
-        throw new AppError({
+  // FIX 2: Security check. 
+  // payments[0] is safe now because of the length check above.
+  if (payments[0].user_id !== userId) {
+    throw new AppError({
       type: "https://payment-service/problems/forbidden",
       title: "Forbidden",
       status: 403,
       detail: "You are not allowed to access these payments"
     });
-    }
+  }
 
-    return payments.map((p) => ({
+  return payments.map((p) => ({
     id: p.id,
     orderId: p.order_id,
     amount: p.amount,
@@ -34,30 +37,31 @@ const getPaymentsByOrder = async(orderId, userId) => {
     provider: p.provider,
     createdAt: p.created_at
   }));
-}
+};
 
+const getPaymentsForUser = async (userId) => {
+  const payments = await paymentQueries.getPaymentsByUserId(userId);
 
-// Get all payments for a user
-const getPaymentsForUser = async(userId) => {
-    const payments = await paymentQueries.getPaymentsByUserId(userId)
-
-    if(!payments.length){
-        throw new AppError({
+  if (!payments || !payments.length) {
+    throw new AppError({
       type: "https://payment-service/problems/payments-not-found",
       title: "Not Found",
       status: 404,
       detail: "No payments found for this user"
-    });}
+    });
+  }
 
-if(payments[0].user_id !== userId){
+  // Security check (Note: usually redundant if query filters by userId, but safe to keep)
+  if (payments[0].user_id !== userId) {
     throw new AppError({
       type: "https://payment-service/problems/forbidden",
       title: "Forbidden",
       status: 403,
       detail: "You are not allowed to access these payments"
     });
-    }
-    return payments.map((p) => ({
+  }
+
+  return payments.map((p) => ({
     id: p.id,
     orderId: p.order_id,
     amount: p.amount,
@@ -65,14 +69,12 @@ if(payments[0].user_id !== userId){
     status: p.status,
     provider: p.provider,
     createdAt: p.created_at
-    }))
-}
+  }));
+};
 
-// Process payment for an order (called by Kafka consumer)
 const processPayment = async ({ orderId, userId, amount, currency = "INR", traceHeaders = {} }) => {
-  const logContext = { orderId, userId, amount }; // Standard context for every log in this function
+  const logContext = { orderId, userId, amount };
 
-  // 1️⃣ Idempotency: Check if array has content
   const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
   if (existingRows && existingRows.length > 0) {
     const existing = existingRows[0];
@@ -83,7 +85,6 @@ const processPayment = async ({ orderId, userId, amount, currency = "INR", trace
     return { id: existing.id, orderId, status: existing.status, isDuplicate: true };
   }
 
-  // 2️⃣ Deterministic Decision
   logger.debug({ orderId }, "Determining mock payment outcome...");
   const paymentSucceeded = parseInt(orderId.replace(/-/g, "").slice(0, 2), 16) % 2 === 0;
   const paymentStatus = paymentSucceeded ? "SUCCESS" : "FAILED";
@@ -115,31 +116,28 @@ const processPayment = async ({ orderId, userId, amount, currency = "INR", trace
       aggregate_id: orderId,
       event_type: eventType,
       payload: { paymentId, orderId, userId, amount, status: paymentStatus },
-      metadata: traceHeaders // 🛰️ This carries your OpenTelemetry Trace ID!
+      metadata: traceHeaders
     }, client);
 
     await client.query("COMMIT");
-    
     logger.info({ orderId, paymentId, paymentStatus }, "Payment transaction committed successfully");
 
     return { id: paymentId, orderId, status: paymentStatus, isDuplicate: false };
 
   } catch (err) {
-    if (client) await client.query("ROLLBACK");
+    await client.query("ROLLBACK"); // FIX: await rollback directly
 
-    // 🛡️ Handle Race Condition: Unique Violation (order_id constraint)
     if (err.code === '23505') {
       logger.warn(
-        { ...logContext, errorCode: err.code }, 
-        "Race condition detected: Unique constraint violation on order_id. Concurrent transaction likely succeeded."
+        { ...logContext, errorCode: err.code },
+        "Race condition detected: Unique constraint violation on order_id."
       );
-      
       const confirmed = await paymentQueries.getPaymentsByOrderId(orderId);
       return { id: confirmed[0].id, orderId, status: confirmed[0].status, isDuplicate: true };
     }
 
     logger.error(
-      { ...logContext, err: { message: err.message, stack: err.stack } }, 
+      { ...logContext, err: { message: err.message, stack: err.stack } },
       "Failed to process payment transaction"
     );
     throw err;
@@ -154,9 +152,14 @@ const processRefund = async ({ orderId, userId, traceHeaders }) => {
   try {
     await client.query("BEGIN");
 
-    const payment = await paymentQueries.getPaymentsByOrder(orderId, client);
+    // FIX 3: Changed to getPaymentsByOrderId (Array) and selected [0]
+    // because your query logic usually returns an array of rows.
+    const payments = await paymentQueries.getPaymentsByOrderId(orderId, client);
+    const payment = payments ? payments[0] : null;
 
     if (!payment || payment.status !== "SUCCESS") {
+      logger.info({ orderId }, "Refund skipped: No successful payment found");
+      await client.query("ROLLBACK");
       return;
     }
 
@@ -175,14 +178,17 @@ const processRefund = async ({ orderId, userId, traceHeaders }) => {
     }, client);
 
     await client.query("COMMIT");
+    logger.info({ orderId, paymentId: payment.id }, "Refund processed successfully");
 
   } catch (err) {
     await client.query("ROLLBACK");
+    logger.error({ orderId, err: err.message }, "Failed to process refund");
     throw err;
   } finally {
     client.release();
   }
 };
+
 module.exports = {
   getPaymentsByOrder,
   getPaymentsForUser,

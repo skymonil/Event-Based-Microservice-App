@@ -14,7 +14,7 @@ const {
     getPaymentsForUser
 } = require('../controllers/payments.contoller')
 
-// Get payments for a specific user
+// Get payments for a specific order
 router.get(
     '/payments/order/:orderId',
     authenticate,

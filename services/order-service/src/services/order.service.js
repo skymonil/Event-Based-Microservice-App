@@ -229,10 +229,16 @@ const handlePaymentRefunded = async({orderId, traceHeaders}) =>{
   const client = await db.connect();
   try {
     
+    const order = await orderQueries.getOrderForUpdate(orderId, client);
+    if(!order) {
+      logger.warn({ orderId }, "Refund handling failed: Order not found");
+      throw new AppError({status: 404, detail: "Order not found"})}
+    
+    
     await client.query("BEGIN")
 
     // 1. Update Order Status to final CANCELLED
-    await orderQueries.markRefunded(orderId, client);
+    await orderQueries.markCancelled(orderId, order.cancel_idempotency_key, client);
     // 2. Insert into Outbox (so other services know it's fully done)
     await orderQueries.createOutboxEntry({
       aggregate_type: "ORDER",

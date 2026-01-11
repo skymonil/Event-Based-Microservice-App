@@ -5,25 +5,24 @@ const paymentService = require('../services/payments.service')
 
 // Get Payments for a specific order
 
-const getPaymentsByOrder = async(req , res , next)=>{
+const getPaymentsByOrder = async (req, res, next) => {
   try {
-    const {orderId} = req.params;
+    const { orderId } = req.params;
     const userId = req.user.userId;
 
-    logger.info({orderId, userId}, "Fetch Payments for order")
-    
-    const payments = await paymentService.getPaymentsByOrder(
-      orderId,
-      userId
-    )
+    logger.info({ orderId, userId }, "Fetch Payments for order");
 
-    return res.status(200).json(payments)
+    const result = await paymentService.getPaymentsByOrder(orderId, userId);
+
+    // ✅ Always 200 — business state is inside payload
+    return res.status(200).json(result);
+
   } catch (error) {
     logger.error(error, "Fetch payments by order failed");
     next(error);
-
   }
-}
+};
+
 
 
 // Get all payments for logged-in user

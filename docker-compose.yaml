@@ -92,6 +92,8 @@ services:
     environment:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,6 +113,8 @@ services:
     environment:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,6 +144,8 @@ services:
     environment:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -172,7 +178,14 @@ services:
     depends_on:
       connect:
         condition: service_started
-
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4318:4318"  # OTLP HTTP (Collector)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
 # =======================
 # VOLUMES
 # =======================

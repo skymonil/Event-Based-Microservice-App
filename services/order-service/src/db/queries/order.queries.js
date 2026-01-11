@@ -88,7 +88,7 @@ const getOrderForUpdate = async(orderId, client) =>{
      return res.rows[0];
 }
 
-const markCancelled = async (orderId, key, client) => {
+const markCancelled = async (orderId, key, client = db) => {
   await client.query(
     `
     UPDATE orders
