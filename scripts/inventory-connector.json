@@ -1,0 +1,19 @@
+{
+  "name": "inventory-outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "password",
+    "database.dbname": "inventory_db",
+    "topic.prefix": "inventory",
+    "table.include.list": "public.outbox", 
+    "plugin.name": "pgoutput",
+    
+
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.fields.additional.placement": "metadata:header:source"
+  }
+}

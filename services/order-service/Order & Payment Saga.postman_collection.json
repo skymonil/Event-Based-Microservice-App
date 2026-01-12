@@ -1,0 +1,278 @@
+{
+	"info": {
+		"_postman_id": "1cc9633c-990b-475f-9ef0-c92e798cd621",
+		"name": "Order & Payment Saga",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "41514843"
+	},
+	"item": [
+		{
+			"name": "Login-User",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Post-response (Tests) script\r",
+							"try {\r",
+							"    const response = pm.response.json();\r",
+							"    \r",
+							"    if (response.token) {\r",
+							"        pm.environment.set(\"bearerToken\", response.token);\r",
+							"        console.log(\"✅ Token successfully set!\");\r",
+							"    } else {\r",
+							"        console.error(\"❌ Login succeeded but 'token' key was not found in response body.\");\r",
+							"    }\r",
+							"} catch (e) {\r",
+							"    console.error(\"❌ Failed to parse response JSON: \", e);\r",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"monil@gmail.com\",\r\n    \"password\": \"monil@1234\"\r\n\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{userServiceUrl}}/login"
+			},
+			"response": []
+		},
+		{
+			"name": "Create-Order",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const uuid = require('uuid');\r",
+							"// Generates a fresh UUID and saves it to the environment\r",
+							"pm.environment.set(\"idempotencyKey\", uuid.v4());"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();\r",
+							"\r",
+							"pm.environment.set(\"activeOrderId\", response.id);"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {}
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{bearerToken}}"
+					}
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "idempotency-key",
+						"value": "{{idempotencyKey}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"items\": [\r\n    {\r\n      \"productId\": \"550e8400-e29b-41d4-a716-446655440000\",\r\n      \"quantity\": 2\r\n    }\r\n  ],\r\n  \"totalAmount\": 510\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{orderServiceUrl}}/orders"
+			},
+			"response": []
+		},
+		{
+			"name": "Get-Order-By-ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{orderServiceUrl}}/orders/{{activeOrderId}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Cancel-Order-By-ID",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.environment.set(\"idempotencyKey\", crypto.randomUUID());"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{bearerToken}}"
+					}
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "idempotency-key",
+						"value": "{{idempotencyKey}}",
+						"type": "text"
+					}
+				],
+				"url": "{{orderServiceUrl}}/orders/cancel/{{activeOrderId}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Get-Order-By-ID Copy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{orderServiceUrl}}/orders/{{activeOrderId}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Get-Payment-Status-By-OrderId",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "idempotency-key",
+						"value": "{{idempotencyKey}}",
+						"type": "text"
+					}
+				],
+				"url": "{{paymentServiceUrl}}/payments/order/{{activeOrderId}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Cancel-Order-By-ID Copy",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.environment.set(\"idempotencyKey\", crypto.randomUUID());"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{bearerToken}}"
+					}
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "idempotency-key",
+						"value": "{{idempotencyKey}}",
+						"type": "text"
+					}
+				],
+				"url": "{{orderServiceUrl}}/orders/cancel/{{activeOrderId}}"
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": {
+			"token": "{{bearerToken}}"
+		}
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

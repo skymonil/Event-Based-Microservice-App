@@ -78,6 +78,17 @@ services:
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
   # =======================
   # MICROSERVICES
   # =======================
@@ -93,7 +104,7 @@ services:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME: order-service
+      OTEL_SERVICE_NAME: user-service  # FIXED: Was order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,16 +133,6 @@ services:
         condition: service_started
     ports:
       - "3001:3001"
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
 
   payment-service:
     build: ./services/payment-service
@@ -145,7 +146,7 @@ services:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME: order-service
+      OTEL_SERVICE_NAME: payment-service # FIXED: Was order-service
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,6 +154,27 @@ services:
         condition: service_started
     ports:
       - "3002:3002"
+
+  inventory-service:  # FIXED: Indentation (Was 3 spaces, now 2)
+    build: ./services/inventory-service
+    container_name: inventory-service
+    volumes:
+      - ./services/inventory-service:/app
+      - /app/node_modules
+    env_file:
+      - ./services/inventory-service/.env
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      DB_HOST: postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: inventory-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "3003:3003"
 
   # =======================
   # INITIALIZATION
@@ -162,30 +184,33 @@ services:
     container_name: connector-init
     volumes:
       - ./scripts:/scripts
+    # FIXED: Entrypoint escaping ($ -> $$ for Compose variables)
     entrypoint: >
       /bin/sh -c "
         echo 'Waiting for Kafka Connect to start...';
-        while [ \$(curl -s -o /dev/null -w '%{http_code}' http://connect:8083/connectors) -ne 200 ]; do
+        while [ $$(curl -s -o /dev/null -w '%{http_code}' http://connect:8083/connectors) -ne 200 ]; do
           sleep 5;
         done;
         echo 'Kafka Connect is up! Registering connectors...';
         for f in /scripts/*.json; do
-          echo \"Registering \$$f...\";
-          curl -X POST -H 'Content-Type: application/json' --data @\$$f http://connect:8083/connectors;
+          echo \"Registering $$f...\";
+          curl -X POST -H 'Content-Type: application/json' --data @$$f http://connect:8083/connectors;
           echo \"\n\";
         done;
         echo 'All connectors processed. Success!';"
     depends_on:
       connect:
         condition: service_started
+
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     ports:
       - "16686:16686" # Jaeger UI
-      - "4318:4318"  # OTLP HTTP (Collector)
+      - "4318:4318"   # OTLP HTTP (Collector)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+
 # =======================
 # VOLUMES
 # =======================
