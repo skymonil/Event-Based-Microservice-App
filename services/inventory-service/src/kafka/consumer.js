@@ -108,30 +108,24 @@ const startConsumer = async () => {
 /**
  * Handler for 'order.created'
  */
+
 const handleOrderCreated = async (payload) => {
-  // Defensive check: Debezium payload sometimes wraps data in 'payload' key
-  // depending on config. We assume standard flat JSON here based on your config.
   const { orderId, items } = payload;
 
   if (!items || items.length === 0) {
-     logger.warn({ orderId }, "Order created with no items, skipping reservation");
+     logger.warn({ orderId }, "⚠️ Order created with no items");
      return;
   }
 
-  // MVP: Processing first item only
-  const productId = items[0].productId;
-  const quantity = items[0].quantity;
-
+  // ✅ Pass the WHOLE array now
   const result = await inventoryService.reserveStock({
     orderId,
-    productId,
-    quantity
+    items
   });
 
   if (!result.success) {
     logger.warn({ orderId, reason: result.reason }, "Reservation failed, triggering compensation");
     
-    // Notify Order Service that reservation failed
     await inventoryService.handleReservationFailed({
       orderId,
       reason: result.reason

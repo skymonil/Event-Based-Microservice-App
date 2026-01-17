@@ -7,7 +7,7 @@ const validate = require("../middleware/validate.middleware");
 const inventoryValidator = require("../validators/inventory.validator");
 
 /**
- * 📦 Product & Stock Management (Admin/Internal)
+ * 📦 Product & Stock Management (Admin/Internal) // Route To Create Products
  */
 router.post(
   "/products",
@@ -16,6 +16,7 @@ router.post(
 );
 
 // RESTful adjustment: Action is scoped to the product
+// Increase/decrease or set stock levels
 router.post(
   "/products/:productId/adjust",
   validate(inventoryValidator.adjustStock),

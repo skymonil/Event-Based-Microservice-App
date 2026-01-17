@@ -56,7 +56,7 @@ const adjustStockIncrement = async ({ productId, warehouseId, quantity }) => {
     ON CONFLICT (product_id, warehouse_id) 
     DO UPDATE SET 
       total_quantity = inventory_stock.total_quantity + $3,
-      available_quantity = inventory_stock.available_quantity + $3,
+      available_quantity = GREATEST(inventory_stock.available_quantity + $3, 0),
       updated_at = NOW()
     RETURNING *
     `,
@@ -155,18 +155,25 @@ const createOutboxEntry = async (entry, client) => {
 
 // B. Sourcing: Find which warehouse has enough stock
 // Strategy: Pick the warehouse with the MOST stock (Load Balancing)
-const findWarehouseWithStock = async (productId, requiredQty) => {
-  const result = await db.query(
+// 🚀 RENAMED & IMPROVED: Matching the Service Call
+// Strategy: Pick the warehouse with the MOST stock (Load Balancing)
+const findAndLockBestWarehouse = async (productId, requiredQty, client) => {
+  // NOTE: You MUST pass 'client' here because this lock is bound to the transaction.
+  // If you use 'db.query', the lock releases immediately, defeating the purpose.
+  const dbClient = client || db; 
+
+  const result = await dbClient.query(
     `
     SELECT warehouse_id, available_quantity 
     FROM inventory_stock
     WHERE product_id = $1 AND available_quantity >= $2
-    ORDER BY available_quantity DESC
+    ORDER BY available_quantity DESC -- Optimization: Pick the warehouse with MOST items first
     LIMIT 1
+    FOR UPDATE SKIP LOCKED
     `,
     [productId, requiredQty]
   );
-  return result.rows[0]; // Returns { warehouse_id, available_quantity } or undefined
+  return result.rows[0]; 
 };
 
 // C. Reserve: Decrement Stock (Atomic Check)
@@ -198,14 +205,17 @@ const createReservation = async ({ orderId, productId, warehouseId, quantity, ex
   );
 };
 // [NEW] Check generic existence for idempotency (Any warehouse)
-const getReservationByOrderAndProduct = async (orderId, productId) => {
+const getReservationExact = async (orderId, productId, warehouseId) => {
   const result = await db.query(
     `SELECT * FROM inventory_reservations 
-     WHERE order_id = $1 AND product_id = $2`,
-    [orderId, productId]
+     WHERE order_id = $1 
+       AND product_id = $2 
+       AND warehouse_id = $3`,
+    [orderId, productId, warehouseId]
   );
   return result.rows[0] || null;
 };
+
 
 
 // Increase stock (Reverse of decrement)
@@ -229,6 +239,41 @@ const updateReservationStatus = async (reservationId, status, client) => {
   );
 };
 
+// 1. Try to Claim the Order (Step 1)
+// Returns the row if inserted, or null if it already existed
+const claimOrder = async (orderId, client) => {
+  // Note: We use the client if passed (transaction), or db pool if not
+  const dbClient = client || db; 
+  
+  const result = await dbClient.query(
+    `INSERT INTO inventory_orders (order_id, status)
+     VALUES ($1, 'PROCESSING')
+     ON CONFLICT (order_id) DO NOTHING
+     RETURNING *`,
+    [orderId]
+  );
+  return result.rows[0];
+};
+
+// 2. Check existing order status (For idempotency checks)
+const getInventoryOrderStatus = async (orderId) => {
+  const result = await db.query(
+    `SELECT status FROM inventory_orders WHERE order_id = $1`,
+    [orderId]
+  );
+  return result.rows[0];
+};
+
+// 3. Update Status (Step 3: Mark Reserved or Failed)
+const updateOrderStatus = async (orderId, status, client) => {
+  await client.query(
+    `UPDATE inventory_orders 
+     SET status = $2, updated_at = NOW() 
+     WHERE order_id = $1`,
+    [orderId, status]
+  );
+};
+
 module.exports = {
   createProduct,
   getProductById,
@@ -239,11 +284,14 @@ module.exports = {
   getStockBreakdown,
   getReservationsByOrderId,
   createOutboxEntry,
-  findWarehouseWithStock,
+  findAndLockBestWarehouse,
   decrementStock,
   createReservation,
-  getReservationByOrderAndProduct,
+  getReservationExact,
   incrementStock,
-  updateReservationStatus
+  updateReservationStatus,
+   claimOrder,
+  getInventoryOrderStatus,
+  updateOrderStatus
 
 };
