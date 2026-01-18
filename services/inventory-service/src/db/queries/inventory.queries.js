@@ -291,6 +291,49 @@ const lockReservationsByOrderId = async (orderId, client) => {
   return result.rows;
 };
 
+/**
+ * 🛡️ SAFE FAILURE TRANSITION
+ * Only mark as FAILED if the order isn't already in a final state (RESERVED/RELEASED).
+ * If the row doesn't exist, insert it as FAILED.
+ */
+const transitionToFailed = async (orderId, client) => {
+  const dbClient = client || db; // Handle pool or client
+
+  const result = await dbClient.query(
+    `
+    INSERT INTO inventory_orders (order_id, status)
+    VALUES ($1, 'FAILED')
+    ON CONFLICT (order_id)
+    DO UPDATE SET 
+      status = 'FAILED',
+      updated_at = NOW()
+    WHERE inventory_orders.status NOT IN ('RESERVED', 'RELEASED') -- 🔒 THE GUARD
+    RETURNING *
+    `,
+    [orderId]
+  );
+  return result.rows[0];
+};
+
+
+/**
+ * 🧹 REAPER QUERY: Find and Mark Expired Reservations
+ * We use 'RETURNING' so the worker knows exactly which products/warehouses 
+ * need their stock levels incremented back.
+ */
+const findAndExpireReservations = async (client) => {
+  const result = await client.query(
+    `
+    UPDATE inventory_reservations
+    SET status = 'EXPIRED', updated_at = NOW()
+    WHERE status = 'RESERVED' 
+      AND expires_at < NOW()
+    RETURNING id, order_id, product_id, warehouse_id, quantity;
+    `
+  );
+  return result.rows;
+};
+
 module.exports = {
   createProduct,
   getProductById,
@@ -310,6 +353,7 @@ module.exports = {
   claimOrder,
   getInventoryOrderStatus,
   updateOrderStatus,
-  lockReservationsByOrderId
-
+  lockReservationsByOrderId,
+  transitionToFailed,
+  findAndExpireReservations
 };

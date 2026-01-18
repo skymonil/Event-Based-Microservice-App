@@ -3,7 +3,7 @@ const { Kafka } = require("kafkajs");
 const { trace, context, propagation } = require("@opentelemetry/api");
 const inventoryService = require("../services/inventory.service");
 const { logger } = require("../utils/logger");
-
+const { AppError, BusinessError, InfraError } = require("../utils/app-error")
 const kafka = new Kafka({
   clientId: "inventory-service",
   brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
@@ -97,8 +97,40 @@ const startConsumer = async () => {
           } catch (err) {
             span.recordException(err);
             span.end();
-            logger.error({ err, topic }, "❌ Error processing message");
-            // In a real app, send to DLQ here
+          // ====================================================
+            // 🛡️ ERROR CLASSIFICATION & RETRY STRATEGY
+            // ====================================================
+            
+            const errorDetails = err instanceof AppError ? err.detail : err.message;
+            const statusCode = err instanceof AppError ? err.status : 500;
+
+            // 🛑 CASE A: Non-Retryable Error (Business Logic / 4xx)
+            // Examples: "Invalid Product ID", "Order already Cancelled", "Validation Error"
+            if (
+                err instanceof BusinessError || 
+                (statusCode >= 400 && statusCode < 500)
+            ) {
+                logger.warn(
+                    { orderId, topic, err: errorDetails }, 
+                    "⛔ Non-Retryable Error (Business Logic). Dropping message to avoid Retry Storm."
+                );
+                
+                // TODO: In a real prod env, send to a 'Dead Letter Queue' (DLQ) topic here.
+                
+                // RETURN means "Success" to Kafka. It commits the offset and moves on.
+                return; 
+            }
+
+            // 🔄 CASE B: Retryable Error (Infra / 5xx / Unknown)
+            // Examples: "DB Timeout", "Network Glitch", "Unhandled Crash"
+            logger.error(
+                { orderId, topic, err: errorDetails }, 
+                "❌ Infrastructure/System Error. Triggering Kafka Retry..."
+            );
+
+            // THROWING tells Kafka "I failed".
+            // Kafka will pause partition consumption based on your retry policy (backoff).
+            throw err;
           }
         });
       });

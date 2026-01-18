@@ -1,6 +1,9 @@
 // src/services/inventory.service.js
 const inventoryQueries = require("../db/queries/inventory.queries");
-const AppError = require("../utils/app-error");
+const { BusinessError, InfraError, AppError } = require("../utils/app-error");
+
+// ... inside reserveStock ...
+
 const { logger } = require("../utils/logger");
 const db = require("../index"); // Ensure DB is imported for transactions
 
@@ -140,28 +143,19 @@ const getReservationsByOrder = async (orderId) => {
 // src/services/inventory.service.js
 
 const reserveStock = async ({ orderId, items }) => {
-  // 🟢 1. Connect ONCE (Single Connection for the whole lifecycle)
   const client = await db.connect();
 
   try {
-    // 🟢 2. Start Transaction (The Safety Net)
     await client.query("BEGIN");
 
     // ====================================================
     // 🛑 STEP 1: CLAIM ORDER (Idempotency Gate)
     // ====================================================
-    // We try to insert 'PROCESSING'. 
-    // If it fails, it means another thread/consumer is already working on it 
-    // or it is already finished.
-    // NOTE: passing 'client' here is critical to lock it within this transaction.
     const claim = await inventoryQueries.claimOrder(orderId, client);
 
     if (!claim) {
-      // ⚠️ Concurrency Handling
-      // We failed to claim. Release OUR transaction attempt immediately.
       await client.query("ROLLBACK"); 
       
-      // Now check the status (Read-Only check doesn't need the transaction lock)
       const existing = await inventoryQueries.getInventoryOrderStatus(orderId);
       
       if (existing && existing.status === 'RESERVED') {
@@ -170,35 +164,43 @@ const reserveStock = async ({ orderId, items }) => {
       }
       
       if (existing && existing.status === 'PROCESSING') {
-         logger.warn({ orderId }, "⚠️ Concurrency: Order is locked by another consumer. Skipping.");
+         logger.warn({ orderId }, "⚠️ Concurrency: Order is locked by another consumer.");
          return { success: true, isDuplicate: true }; 
       }
 
-      // If 'FAILED' or 'RELEASED', typically we stop here to prevent "Zombie" retries.
       return { success: false, reason: "ORDER_ALREADY_PROCESSED" };
     }
 
     // ====================================================
     // 🔄 STEP 2: RESERVE ITEMS (The Atomic Loop)
     // ====================================================
-    // If we are here, we own the 'PROCESSING' lock in this transaction.
-    
     const successfulReservations = [];
 
-    // Loop through items
     for (const item of items) {
       const { productId, quantity } = item;
 
-      // A. Lock & Source
-      // We use the SAME client to maintain the transaction lock
-      const stockLocation = await inventoryQueries.findAndLockBestWarehouse(
-        productId, 
-        quantity, 
-        client
-      );
+      // 🛑 Business Rule: Bulk Limit Check
+      if (quantity > 1000) {
+        throw new BusinessError(`Bulk orders of ${quantity} not allowed via this API`);
+      }
 
+      let stockLocation;
+      try {
+        // 🔒 Attempt to Lock Warehouse Row
+        stockLocation = await inventoryQueries.findAndLockBestWarehouse(
+          productId, 
+          quantity, 
+          client
+        );
+      } catch (dbErr) {
+        // 🏗️ InfraError: Signals the consumer that DB is down (Retryable)
+        throw new InfraError(`Database unavailable: ${dbErr.message}`);
+      }
+
+      // 📉 Out of Stock Check
       if (!stockLocation) {
-        throw new AppError({ status: 409, detail: `Out of Stock: ${productId}` });
+        // Status 409 maps to "Out of Stock" logic in our system
+        throw new AppError({ status: 409, detail: "Out of Stock" });
       }
 
       const { warehouse_id: warehouseId } = stockLocation;
@@ -231,34 +233,41 @@ const reserveStock = async ({ orderId, items }) => {
     // ====================================================
     // ✅ STEP 3: MARK AS COMPLETE
     // ====================================================
-    // Update the status row we inserted in Step 1
     await inventoryQueries.updateOrderStatus(orderId, 'RESERVED', client);
 
     await client.query("COMMIT");
+
+    // 📈 METRICS: Success
+    metrics.reservationCounter.inc({ status: 'success' });
+    metrics.activeReservationsGauge.inc(successfulReservations.length); // Track active items
+
     logger.info({ orderId }, "✅ Stock reserved & Order marked RESERVED");
     return { success: true };
 
   } catch (error) {
-    // 🔴 ROLLBACK
-    // This undoes EVERYTHING: The stock decrements, the reservations, 
-    // AND the 'PROCESSING' insert from Step 1.
     await client.query("ROLLBACK");
+
+    // 📈 METRICS: Failure Classification
+    let reason = 'system_error';
+    if (error instanceof BusinessError) reason = 'business_rule';
+    else if (error.status === 409) reason = 'out_of_stock';
+    
+    metrics.reservationCounter.inc({ status: 'failed', reason });
     
     // ====================================================
     // ❌ FAILURE HANDLER (Post-Rollback)
     // ====================================================
-    // Since we rolled back, the 'PROCESSING' row is gone. 
-    // We want to record that this order FAILED so we don't retry it infinitely.
-    // We need a NEW, short transaction just for this status update.
     try {
-        await inventoryQueries.claimOrder(orderId); // Re-insert row (autocommit)
-        await inventoryQueries.updateOrderStatus(orderId, 'FAILED'); // Mark failed
+        const failedResult = await inventoryQueries.transitionToFailed(orderId);
+        if (failedResult) {
+           logger.info({ orderId }, "❌ Order marked as FAILED in DB.");
+        }
     } catch (updateErr) {
         logger.error({ err: updateErr }, "Failed to update order status to FAILED");
     }
 
     logger.warn({ orderId, err: error.message }, "❌ Reservation failed");
-    return { success: false, reason: error.detail || "Transaction Failed" };
+    return { success: false, reason: error.detail || error.message };
   } finally {
     client.release();
   }
@@ -272,82 +281,52 @@ const reserveStock = async ({ orderId, items }) => {
  * If status is 'CONFIRMED', 'SHIPPED', or 'RELEASED', we must ignore.
  */
 const releaseStock = async (orderId) => {
-   // 🟢 1. Connect
   const client = await db.connect();
   try {
-    await client.query("BEGIN");
+    await client.query("BEGIN"); // FIXED: Only one BEGIN
 
-    // ====================================================
-    // 🔒 STEP 1: FETCH & LOCK (The Fix)
-    // ====================================================
-    // "FOR UPDATE" stops Consumer B here until we Commit.
-    // When Consumer B finally unblocks, it will read the UPDATED rows.
+    // LOCK rows for update to prevent double-release race conditions
     const reservations = await inventoryQueries.lockReservationsByOrderId(orderId, client);
 
-  if (!reservations || reservations.length === 0) {
-    logger.info({ orderId }, "ℹ️ No reservations found to release (Idempotent)");
-    return;
-  }
-
-  
-  
-    await client.query("BEGIN");
+    if (!reservations || reservations.length === 0) {
+      await client.query("ROLLBACK"); // Clean up before returning
+      logger.info({ orderId }, "ℹ️ No reservations found to release");
+      return;
+    }
 
     let itemsReleased = 0;
     const releasedDetails = [];
 
     for (const res of reservations) {
-     // ====================================================
-      // 🛡️ STEP 2: STATE CHECK (Now Thread-Safe)
-      // ====================================================
-      // Because we hold the lock, we are GUARANTEED that 'res.status'
-      // is the absolute latest truth. No one else can be changing it right now.
-       if (res.status !== 'RESERVED') {
-        // If Consumer A already released it, Consumer B sees 'RELEASED' here and skips.
-        // Or if it was SHIPPED, we skip.
-        continue; 
-      }
-      logger.info({ orderId, warehouseId: res.warehouse_id }, "↩️ Releasing stock back to warehouse");
+      if (res.status !== 'RESERVED') continue; 
 
-      // A. Return stock to "Available" pile
       await inventoryQueries.incrementStock(
         { productId: res.product_id, warehouseId: res.warehouse_id, quantity: res.quantity },
         client
       );
 
-      // B. Mark reservation as RELEASED
       await inventoryQueries.updateReservationStatus(res.id, 'RELEASED', client);
       itemsReleased++;
       releasedDetails.push({ productId: res.product_id, warehouseId: res.warehouse_id });
     }
 
-    // C. Sync Order-Level Status (The new table we added)
-    // Only mark order as 'RELEASED' if we actually released items.
-   if (itemsReleased > 0) {
+    if (itemsReleased > 0) {
       await inventoryQueries.updateOrderStatus(orderId, 'RELEASED', client);
 
       await inventoryQueries.createOutboxEntry({
-        aggregate_type: "INVENTORY",
-        aggregate_id: orderId,
+        aggregate_type: "INVENTORY", aggregate_id: orderId,
         event_type: "inventory.released",
-        payload: { 
-          orderId, 
-          reason: "Payment Failed / Cancelled", 
-          items: releasedDetails 
-        },
+        payload: { orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
         metadata: { source: "inventory-service" }
       }, client);
-    } else {
-       logger.info({ orderId }, "ℹ️ Order processed, but no items needed releasing (already released or shipped).");
     }
 
     await client.query("COMMIT");
     logger.info({ orderId, count: itemsReleased }, "✅ Stock release cycle completed");
 
-  }
-  catch (err) {
+  } catch (err) {
     await client.query("ROLLBACK");
-    logger.error({ err, orderId }, "❌ Failed to release stock, transaction rolled back");
+    logger.error({ err, orderId }, "❌ Failed to release stock");
     throw err;
   } finally {
     client.release();
