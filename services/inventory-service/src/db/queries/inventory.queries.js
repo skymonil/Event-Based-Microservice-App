@@ -274,6 +274,23 @@ const updateOrderStatus = async (orderId, status, client) => {
   );
 };
 
+/**
+ * 🔐 LOCKING QUERY for Release Process
+ * Fetches reservations and locks the rows so no other consumer 
+ * can modify them until this transaction commits/rollbacks.
+ */
+const lockReservationsByOrderId = async (orderId, client) => {
+  const result = await client.query(
+    `
+    SELECT * FROM inventory_reservations 
+    WHERE order_id = $1 
+    FOR UPDATE
+    `,
+    [orderId]
+  );
+  return result.rows;
+};
+
 module.exports = {
   createProduct,
   getProductById,
@@ -290,8 +307,9 @@ module.exports = {
   getReservationExact,
   incrementStock,
   updateReservationStatus,
-   claimOrder,
+  claimOrder,
   getInventoryOrderStatus,
-  updateOrderStatus
+  updateOrderStatus,
+  lockReservationsByOrderId
 
 };

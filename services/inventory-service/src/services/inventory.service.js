@@ -272,30 +272,41 @@ const reserveStock = async ({ orderId, items }) => {
  * If status is 'CONFIRMED', 'SHIPPED', or 'RELEASED', we must ignore.
  */
 const releaseStock = async (orderId) => {
-  // 1. Fetch all reservation lines for this order
-  const reservations = await inventoryQueries.getReservationsByOrderId(orderId);
+   // 🟢 1. Connect
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    // ====================================================
+    // 🔒 STEP 1: FETCH & LOCK (The Fix)
+    // ====================================================
+    // "FOR UPDATE" stops Consumer B here until we Commit.
+    // When Consumer B finally unblocks, it will read the UPDATED rows.
+    const reservations = await inventoryQueries.lockReservationsByOrderId(orderId, client);
 
   if (!reservations || reservations.length === 0) {
     logger.info({ orderId }, "ℹ️ No reservations found to release (Idempotent)");
     return;
   }
 
-  const client = await db.connect();
-  try {
+  
+  
     await client.query("BEGIN");
 
     let itemsReleased = 0;
+    const releasedDetails = [];
 
     for (const res of reservations) {
-      // 🛑 STRICT GUARD: Only release if actively RESERVED
-      if (res.status !== 'RESERVED') {
-        logger.warn(
-          { orderId, product: res.product_id, status: res.status }, 
-          "⚠️ Skipped release: Item is not in RESERVED state (might be SHIPPED or already RELEASED)"
-        );
-        continue;
+     // ====================================================
+      // 🛡️ STEP 2: STATE CHECK (Now Thread-Safe)
+      // ====================================================
+      // Because we hold the lock, we are GUARANTEED that 'res.status'
+      // is the absolute latest truth. No one else can be changing it right now.
+       if (res.status !== 'RESERVED') {
+        // If Consumer A already released it, Consumer B sees 'RELEASED' here and skips.
+        // Or if it was SHIPPED, we skip.
+        continue; 
       }
-
       logger.info({ orderId, warehouseId: res.warehouse_id }, "↩️ Releasing stock back to warehouse");
 
       // A. Return stock to "Available" pile
@@ -307,20 +318,36 @@ const releaseStock = async (orderId) => {
       // B. Mark reservation as RELEASED
       await inventoryQueries.updateReservationStatus(res.id, 'RELEASED', client);
       itemsReleased++;
+      releasedDetails.push({ productId: res.product_id, warehouseId: res.warehouse_id });
     }
 
     // C. Sync Order-Level Status (The new table we added)
     // Only mark order as 'RELEASED' if we actually released items.
-    if (itemsReleased > 0) {
+   if (itemsReleased > 0) {
       await inventoryQueries.updateOrderStatus(orderId, 'RELEASED', client);
+
+      await inventoryQueries.createOutboxEntry({
+        aggregate_type: "INVENTORY",
+        aggregate_id: orderId,
+        event_type: "inventory.released",
+        payload: { 
+          orderId, 
+          reason: "Payment Failed / Cancelled", 
+          items: releasedDetails 
+        },
+        metadata: { source: "inventory-service" }
+      }, client);
+    } else {
+       logger.info({ orderId }, "ℹ️ Order processed, but no items needed releasing (already released or shipped).");
     }
 
     await client.query("COMMIT");
     logger.info({ orderId, count: itemsReleased }, "✅ Stock release cycle completed");
 
-  } catch (err) {
+  }
+  catch (err) {
     await client.query("ROLLBACK");
-    logger.error({ err, orderId }, "🔥 Failed to release stock");
+    logger.error({ err, orderId }, "❌ Failed to release stock, transaction rolled back");
     throw err;
   } finally {
     client.release();

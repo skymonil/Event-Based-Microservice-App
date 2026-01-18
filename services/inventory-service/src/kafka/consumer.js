@@ -1,3 +1,4 @@
+// services/inventory-service/src/kafka/consumer.js
 const { Kafka } = require("kafkajs");
 const { trace, context, propagation } = require("@opentelemetry/api");
 const inventoryService = require("../services/inventory.service");
