@@ -5,8 +5,8 @@ const { BusinessError, InfraError, AppError } = require("../utils/app-error");
 // ... inside reserveStock ...
 
 const { logger } = require("../utils/logger");
-const db = require("../index"); // Ensure DB is imported for transactions
-
+const db = require("../db/index"); // Ensure DB is imported for transactions
+const metrics = require("../utils/metrics");
 /**
  * Create a new product in the catalog
  */
@@ -142,7 +142,7 @@ const getReservationsByOrder = async (orderId) => {
  */
 // src/services/inventory.service.js
 
-const reserveStock = async ({ orderId, items }) => {
+const reserveStock = async ({ orderId, items, totalAmount,userId }) => {
   const client = await db.connect();
 
   try {
@@ -226,7 +226,7 @@ const reserveStock = async ({ orderId, items }) => {
       aggregate_type: "INVENTORY",
       aggregate_id: orderId,
       event_type: "inventory.reserved",
-      payload: { orderId, items: successfulReservations, status: "RESERVED" },
+      payload: { orderId, items: successfulReservations, status: "RESERVED", totalAmount,  userId },
       metadata: { source: "inventory-service" }
     }, client);
 

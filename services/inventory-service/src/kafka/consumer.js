@@ -34,7 +34,7 @@ const startConsumer = async () => {
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-      
+        let orderId = "unknown";
       // ---------------------------------------------------------
       // 🛠️ FIX: Debezium Header Unpacking
       // Debezium sends metadata as a single JSON string in 'event_metadata'
@@ -143,7 +143,7 @@ const startConsumer = async () => {
  */
 
 const handleOrderCreated = async (payload) => {
-  const { orderId, items } = payload;
+  const { orderId, items, totalAmount, userId } = payload;
 
   if (!items || items.length === 0) {
      logger.warn({ orderId }, "⚠️ Order created with no items");
@@ -153,7 +153,9 @@ const handleOrderCreated = async (payload) => {
   // ✅ Pass the WHOLE array now
   const result = await inventoryService.reserveStock({
     orderId,
-    items
+    items,
+    totalAmount,
+    userId
   });
 
   if (!result.success) {

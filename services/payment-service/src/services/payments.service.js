@@ -1,3 +1,4 @@
+// services/payment-service/src/services/payments.service.js
 const { v4: uuidv4 } = require("uuid");
 const paymentQueries = require("../db/queries/payments.queries");
 const AppError = require("../utils/app-error");
@@ -72,8 +73,8 @@ const getPaymentsForUser = async (userId) => {
   }));
 };
 
-const processPayment = async ({ orderId, userId, amount, currency = "INR", traceHeaders = {} }) => {
-  const logContext = { orderId, userId, amount };
+const processPayment = async ({ orderId, userId, totalAmount, currency = "INR", traceHeaders = {} }) => {
+  const logContext = { orderId, userId, totalAmount };
 
   const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
   if (existingRows && existingRows.length > 0) {
@@ -105,7 +106,7 @@ const processPayment = async ({ orderId, userId, amount, currency = "INR", trace
       id: paymentId,
       orderId,
       userId,
-      amount,
+      amount: totalAmount,
       currency,
       status: paymentStatus,
       provider: "MOCK"
@@ -115,7 +116,7 @@ const processPayment = async ({ orderId, userId, amount, currency = "INR", trace
       aggregate_type: "PAYMENT",
       aggregate_id: orderId,
       event_type: eventType,
-      payload: { paymentId, orderId, userId, amount, status: paymentStatus },
+      payload: { paymentId, orderId, userId,  totalAmount, status: paymentStatus },
       metadata: traceHeaders
     }, client);
 

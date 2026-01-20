@@ -7,40 +7,27 @@
 	},
 	"item": [
 		{
-			"name": "Login-User",
+			"name": "1. Login-User",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"// Post-response (Tests) script\r",
-							"try {\r",
-							"    const response = pm.response.json();\r",
-							"    \r",
-							"    if (response.token) {\r",
-							"        pm.environment.set(\"bearerToken\", response.token);\r",
-							"        console.log(\"✅ Token successfully set!\");\r",
-							"    } else {\r",
-							"        console.error(\"❌ Login succeeded but 'token' key was not found in response body.\");\r",
-							"    }\r",
-							"} catch (e) {\r",
-							"    console.error(\"❌ Failed to parse response JSON: \", e);\r",
+							"// Post-response (Tests) script",
+							"try {",
+							"    const response = pm.response.json();",
+							"    ",
+							"    if (response.token) {",
+							"        pm.environment.set(\"bearerToken\", response.token);",
+							"        console.log(\"✅ Token successfully set!\");",
+							"    } else {",
+							"        console.error(\"❌ Login succeeded but 'token' key was not found in response body.\");",
+							"    }",
+							"} catch (e) {",
+							"    console.error(\"❌ Failed to parse response JSON: \", e);",
 							"}"
 						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				},
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							""
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
+						"type": "text/javascript"
 					}
 				}
 			],
@@ -49,7 +36,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"email\": \"monil@gmail.com\",\r\n    \"password\": \"monil@1234\"\r\n\r\n}",
+					"raw": "{\r\n    \"email\": \"monil@gmail.com\",\r\n    \"password\": \"monil@1234\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -61,38 +48,38 @@
 			"response": []
 		},
 		{
-			"name": "Create-Order",
+			"name": "2. Create-Order (MacBook Pro)",
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"const uuid = require('uuid');\r",
-							"// Generates a fresh UUID and saves it to the environment\r",
+							"const uuid = require('uuid');",
+							"// Generates a fresh UUID and saves it to the environment",
 							"pm.environment.set(\"idempotencyKey\", uuid.v4());"
 						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
+						"type": "text/javascript"
 					}
 				},
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"const response = pm.response.json();\r",
-							"\r",
-							"pm.environment.set(\"activeOrderId\", response.id);"
+							"const response = pm.response.json();",
+							"",
+							"pm.test(\"Order Created (201)\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"if (response.id) {",
+							"    pm.environment.set(\"activeOrderId\", response.id);",
+							"    console.log(\"✅ Active Order ID set to:\", response.id);",
+							"}"
 						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
+						"type": "text/javascript"
 					}
 				}
 			],
-			"protocolProfileBehavior": {
-				"disabledSystemHeaders": {}
-			},
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -110,7 +97,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"items\": [\r\n    {\r\n      \"productId\": \"550e8400-e29b-41d4-a716-446655440000\",\r\n      \"quantity\": 2\r\n    }\r\n  ],\r\n  \"totalAmount\": 510\r\n}\r\n",
+					"raw": "{\r\n  \"items\": [\r\n    {\r\n      \"productId\": \"bc6ed327-a5c9-4551-92d2-f38462a095f4\",\r\n      \"quantity\": 1\r\n    }\r\n  ],\r\n  \"totalAmount\": 2500\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -122,37 +109,22 @@
 			"response": []
 		},
 		{
-			"name": "Get-Order-By-ID",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": "{{orderServiceUrl}}/orders/{{activeOrderId}}"
-			},
-			"response": []
-		},
-		{
-			"name": "Cancel-Order-By-ID",
+			"name": "3. Check-Inventory-Reservation",
 			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"pm.environment.set(\"idempotencyKey\", crypto.randomUUID());"
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				},
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							""
+							"pm.test(\"Stock should be RESERVED\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    // Find the reservation for this order",
+							"    const res = jsonData.find(r => r.order_id === pm.environment.get(\"activeOrderId\"));",
+							"    ",
+							"    pm.expect(res).to.not.be.undefined;",
+							"    pm.expect(res.status).to.eql(\"RESERVED\");",
+							"});"
 						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
+						"type": "text/javascript"
 					}
 				}
 			],
@@ -163,30 +135,39 @@
 						"token": "{{bearerToken}}"
 					}
 				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "idempotency-key",
-						"value": "{{idempotencyKey}}",
-						"type": "text"
-					}
-				],
-				"url": "{{orderServiceUrl}}/orders/cancel/{{activeOrderId}}"
-			},
-			"response": []
-		},
-		{
-			"name": "Get-Order-By-ID Copy",
-			"request": {
 				"method": "GET",
 				"header": [],
-				"url": "{{orderServiceUrl}}/orders/{{activeOrderId}}"
+				"url": "{{inventoryServiceUrl}}/api/inventory/reservations/{{activeOrderId}}"
 			},
 			"response": []
 		},
 		{
-			"name": "Get-Payment-Status-By-OrderId",
+			"name": "4. Get-Payment-Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Payment should be SUCCESS or FAILED\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    if (jsonData.length > 0) {",
+							"        const status = jsonData[0].status;",
+							"        pm.expect(status).to.be.oneOf([\"SUCCESS\", \"FAILED\"]);",
+							"        pm.environment.set(\"paymentResult\", status);",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{bearerToken}}"
+					}
+				},
 				"method": "GET",
 				"header": [
 					{
@@ -200,7 +181,43 @@
 			"response": []
 		},
 		{
-			"name": "Cancel-Order-By-ID Copy",
+			"name": "5. Get-Final-Order-Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Order Status matches Payment Result\", function () {",
+							"    const order = pm.response.json();",
+							"    const paymentStatus = pm.environment.get(\"paymentResult\");",
+							"",
+							"    // If payment hasn't processed yet, this might still be PENDING or AWAITING_PAYMENT",
+							"    if (paymentStatus === \"SUCCESS\") {",
+							"        pm.expect(order.status).to.eql(\"CONFIRMED\");",
+							"    } else if (paymentStatus === \"FAILED\") {",
+							"        pm.expect(order.status).to.eql(\"CANCELLED\");",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{bearerToken}}"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"url": "{{orderServiceUrl}}/orders/{{activeOrderId}}"
+			},
+			"response": []
+		},
+		{
+			"name": "6. Cancel-Order (Manual Compensation)",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -208,20 +225,7 @@
 						"exec": [
 							"pm.environment.set(\"idempotencyKey\", crypto.randomUUID());"
 						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							""
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
+						"type": "text/javascript"
 					}
 				}
 			],
@@ -251,28 +255,5 @@
 			"token": "{{bearerToken}}"
 		}
 	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		}
-	]
+	"event": []
 }

@@ -18,6 +18,10 @@ pool.on("error", (err) => {
   process.exit(1);
 });
 
+const connect = () => {
+  return pool.connect();
+};
+
 /**
  * Run a SQL query
  */
@@ -35,5 +39,6 @@ const close = async () => {
 
 module.exports = {
   query,
-  close
+  close,
+  connect
 };

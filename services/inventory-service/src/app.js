@@ -4,6 +4,7 @@ const cors = require("cors");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
 const inventoryRoutes = require("./routes/inventory.routes");
 const errorHandler = require("./middleware/error.middleware");
+const { register } = require("./utils/metrics");
 
 const app = express();
 
@@ -26,6 +27,11 @@ app.get("/health", (req, res) => {
 
 // Routes
 app.use("/api", inventoryRoutes);
+
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
+});
 
 // Central error handler (must be last)
 app.use(errorHandler);

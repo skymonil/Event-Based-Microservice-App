@@ -1,3 +1,4 @@
+// services/payment-service/src/kafka/consumer.js
 const {
   kafkaMessagesConsumed,
   kafkaRetries,
@@ -30,7 +31,7 @@ const startConsumer = async () => {
       await consumer.connect();
 
       await consumer.subscribe({
-        topics: ["order.created", "order.cancel.requested"], 
+        topics: [ "inventory.reserved", "order.cancel.requested"], 
         fromBeginning: false
       });
 
@@ -74,12 +75,13 @@ const startConsumer = async () => {
               },
               async (span) => {
                  // 3. 🧭 ROUTING LOGIC
-                if (topic === "order.created") {
+                if (topic === "inventory.reserved" ) {
                   await paymentService.processPayment({
                     orderId: event.orderId,
                     userId: event.userId,
-                    amount: event.totalAmount,
+                    totalAmount: event.totalAmount,
                     idempotencyKey: event.idempotencyKey,
+                    currency: event.currency || "INR",
                     traceHeaders: event.metadata // Pass headers for downstream outbox
                   });
                 } 

@@ -43,7 +43,7 @@ router.get(
 
 // Critical for debugging Sagas
 router.get(
-  "/orders/:orderId/reservations",
+  "/inventory/reservations/:orderId",
   inventoryController.getReservationsByOrder
 );
 

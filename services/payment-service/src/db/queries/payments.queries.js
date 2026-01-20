@@ -1,3 +1,4 @@
+// services/payment-service/src/db/queries/payments.queries.js
 const db = require("../index");
 
 /**
