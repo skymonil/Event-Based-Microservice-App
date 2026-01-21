@@ -21,7 +21,7 @@ const startConsumer = async () => {
       await consumer.connect();
       // Subscribe to relevant topics
       await consumer.subscribe({ 
-        topics: ["order.created", "payment.failed", "order.cancelled"], 
+        topics: ["order.created", "payment.failed", "order.cancelled","payment.refunded"], 
         fromBeginning: false 
       });
       connected = true;
@@ -85,6 +85,7 @@ const startConsumer = async () => {
 
               case "payment.failed":
               case "order.cancelled":
+              case "payment.refunded":
                 // ↩️ SAGA COMPENSATION: Release stock
                 await handleReleaseStock(payload);
                 break;
