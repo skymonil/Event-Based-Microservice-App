@@ -1,0 +1,368 @@
+{
+  "info": {
+    "_postman_id": "aef310c7-91b3-4063-86cb-99a55c593419",
+    "name": "CQRS Verification Suite",
+    "description": "Tests to verify the Redis Read Model and Event-Driven Synchronization.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "41514843"
+  },
+  "item": [
+    {
+      "name": "1. Create Product (Write Model)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "// Save the Product ID for future requests",
+              "pm.collectionVariables.set(\"productId\", jsonData.id);",
+              "console.log(\"Created Product: \" + jsonData.id);",
+              "",
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// 1. Generate a valid UUID",
+              "const randomId = pm.variables.replaceIn('{{$guid}}');",
+              "pm.collectionVariables.set(\"productId\", randomId);",
+              "",
+              "// 2. Generate a random SKU (e.g., CQRS-8492)",
+              "const randomSku = \"CQRS-\" + Math.floor(Math.random() * 10000);",
+              "pm.collectionVariables.set(\"productSku\", randomSku);",
+              "",
+              "console.log(\"Generated ID: \" + randomId);",
+              "console.log(\"Generated SKU: \" + randomSku);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"{{productId}}\",\n    \"name\": \"CQRS Test Item\",\n    \"sku\": \"{{productSku}}\"  \n}"
+        },
+        "url": {
+          "raw": "http://localhost:3003/api/products",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "api",
+            "products"
+          ]
+        },
+        "description": "Creates a product in Postgres. The service should emit 'product.created'."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Adjust Stock (Write Model)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate a valid UUID for the Warehouse ID\r",
+              "const warehouseId = pm.variables.replaceIn('{{$guid}}');\r",
+              "pm.collectionVariables.set(\"testWarehouseId\", warehouseId);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"warehouseId\": \"11111111-1111-1111-1111-111111111111\",\n    \"quantity\": 100,\n    \"mode\": \"SET\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3003/api/products/{{productId}}/adjust",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "adjust"
+          ]
+        },
+        "description": "Sets stock in Postgres. The service should emit 'stock.adjusted'."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Wait for Kafka Sync",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://postman-echo.com/delay/2",
+          "protocol": "https",
+          "host": [
+            "postman-echo",
+            "com"
+          ],
+          "path": [
+            "delay",
+            "2"
+          ]
+        },
+        "description": "Pauses for 2 seconds to give Kafka time to sync Postgres -> Redis."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Check Availability (Read Model Check)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Source should be CACHE (Redis)\", function () {",
+              "    pm.expect(jsonData.source).to.eql(\"cache\");",
+              "});",
+              "",
+              "pm.test(\"Available quantity should be 100\", function () {",
+              "    pm.expect(jsonData.availableQuantity).to.eql(100);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/api/availability?productId={{productId}}&quantity=1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "api",
+            "availability"
+          ],
+          "query": [
+            {
+              "key": "productId",
+              "value": "{{productId}}"
+            },
+            {
+              "key": "quantity",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Hits the GET endpoint. If CQRS works, it returns source: 'cache'."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Reserve Stock (Trigger Saga)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"userId\": \"user_123\",\n    \"items\": [\n        {\n            \"productId\": \"{{productId}}\",\n            \"quantity\": 5,\n            \"price\": 50\n        }\n    ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3001",
+          "path": [
+            "api",
+            "orders"
+          ]
+        },
+        "description": "Creates an order. Inventory Service listens, reserves stock, and emits 'inventory.reserved'."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Wait for Saga Sync",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://postman-echo.com/delay/3",
+          "protocol": "https",
+          "host": [
+            "postman-echo",
+            "com"
+          ],
+          "path": [
+            "delay",
+            "3"
+          ]
+        },
+        "description": "Waits 3s for Saga to complete and Redis to update."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Check Availability (Post-Saga)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Source is still CACHE\", function () {",
+              "    pm.expect(jsonData.source).to.eql(\"cache\");",
+              "});",
+              "",
+              "pm.test(\"Stock should have dropped to 95\", function () {",
+              "    // 100 initial - 5 ordered = 95",
+              "    pm.expect(jsonData.availableQuantity).to.eql(95);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/api/availability?productId={{productId}}&quantity=1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "api",
+            "availability"
+          ],
+          "query": [
+            {
+              "key": "productId",
+              "value": "{{productId}}"
+            },
+            {
+              "key": "quantity",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Verifies Redis was automatically updated by the 'inventory.reserved' event."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "productSku",
+      "value": ""
+    },
+    {
+      "key": "testWarehouseId",
+      "value": ""
+    }
+  ]
+}

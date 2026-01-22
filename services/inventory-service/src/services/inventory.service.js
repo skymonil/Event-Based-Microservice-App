@@ -33,6 +33,7 @@ const createProduct = async ({ id, name, sku }) => {
       aggregate_id: id,
       event_type: "product.created", 
       payload: { 
+        event_type: "product.created",
           id, 
           name, 
           sku, 
@@ -82,6 +83,7 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
       aggregate_id: productId,
       event_type: "stock.adjusted",
       payload: {
+        event_type: "stock.adjusted",
         productId,
         total: result.total_quantity,
         available: result.available_quantity
@@ -224,6 +226,7 @@ const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
       aggregate_id: orderId,
       event_type: "inventory.reserved",
       payload: { 
+        event_type: "inventory.reserved",
           orderId, 
           userId, // Passed from consumer
           items: successfulReservations, 

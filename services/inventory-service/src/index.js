@@ -18,7 +18,11 @@ const startServer = async () => {
     // We AWAIT this. If Kafka is down, we don't start the web server.
     await startConsumer(); 
     logger.info("✅ Inventory Kafka Consumer Connected & Ready");
-
+    
+    logger.info("⏳ Connecting to Redis for Stock Projections...");
+    await startRedisProjection();
+    logger.info("✅ Redis Stock Projection Consumer Connected & Ready");
+    
     server.listen(config.port, () => {
       logger.info(`🚀 Inventory Service running on port ${config.port}`);
     });

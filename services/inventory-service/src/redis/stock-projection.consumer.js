@@ -11,17 +11,23 @@ const startRedisProjection = async () => {
   await consumer.connect();
   await consumer.subscribe({
     topics: [
-     "outbox.event.INVENTORY"
+      "product.created",
+      "inventory.reserved",
+      "inventory.released",
+      "inventory.expired",
+      "stock.adjusted"
     ],
     fromBeginning: true // 🔥 allows rebuild
   });
 
   await consumer.run({
     eachMessage: async ({ topic, message }) => {
-      const event = JSON.parse(message.value.toString());
-      const eventType = event.event_type; // Ensure your Outbox Config maps this!
-      const payload = event.payload;
-      const { orderId, items } = event.payload;
+      const payload = JSON.parse(message.value.toString());
+     const eventType = payload.event_type; 
+     logger.info({ eventType, payload }, "📥 Redis Consumer received event");
+
+     const { orderId, items } = payload;
+    
 
       try {
         switch (eventType) {
@@ -38,7 +44,7 @@ const startRedisProjection = async () => {
             break;
 
           case "stock.adjusted":
-            await resetStock(event.payload);
+            await resetStock(payload);
             break;
         }
       } catch (err) {

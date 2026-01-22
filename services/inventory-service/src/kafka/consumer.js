@@ -9,7 +9,11 @@ const kafka = new Kafka({
   brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
-const consumer = kafka.consumer({ groupId: "inventory-group" });
+const consumer = kafka.consumer({ groupId: "inventory-group",
+   sessionTimeout: 30000,
+  heartbeatInterval: 3000,
+  rebalanceTimeout: 60000
+ });
 const tracer = trace.getTracer("inventory-consumer");
 
 const startConsumer = async () => {
