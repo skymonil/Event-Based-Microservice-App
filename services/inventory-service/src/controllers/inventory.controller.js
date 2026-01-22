@@ -1,4 +1,5 @@
 // src/controllers/inventory.controller.js
+const readService = require("../services/inventory.read.service");
 const inventoryService = require("../services/inventory.service");
 const { logger } = require("../utils/logger");
 
@@ -11,7 +12,7 @@ const createProduct = async (req, res, next) => {
     logger.info({ id, sku }, "📝 Request received to create new product");
 
     const newProduct = await inventoryService.createProduct(req.body);
-    
+
     logger.info({ id }, "✅ Product created successfully");
     res.status(201).json(newProduct);
   } catch (error) {
@@ -40,7 +41,7 @@ const adjustStock = async (req, res, next) => {
     });
 
     logger.info({ productId, warehouseId }, "✅ Stock adjustment committed");
-    
+
     res.status(200).json({
       message: "Stock adjusted successfully",
       stock: updatedStock,
@@ -51,23 +52,54 @@ const adjustStock = async (req, res, next) => {
 };
 
 /**
- * 3. Check Availability
- * NOTE: We avoid logging INFO here because this is a high-traffic endpoint.
- * Use DEBUG level if you need to trace it during development.
+ * 3. Check Availability (CQRS Implemented)
  */
 const checkAvailability = async (req, res, next) => {
   try {
-    const { productId, quantity, warehouseId } = req.query;
+    const productId = req.query.productId;
+    // Ensure quantity is a number
+    const quantity = parseInt(req.query.quantity, 10) || 1;
+    const warehouseId = req.query.warehouseId;
 
-    // logger.debug({ productId, quantity }, "Checking availability"); 
+    // ====================================================
+    // 🚀 STEP 1: TRY REDIS FIRST (Fast Path)
+    // ====================================================
+    // Optimization: Redis only stores global stock usually. 
+    // If a specific warehouse is requested, skip to DB (unless you model per-warehouse in Redis)
+    if (!warehouseId) {
+      try {
+        const cachedStock = await readService.getProductAvailability(productId);
 
-    const result = await inventoryService.checkAvailability({
-      productId,
-      quantity,
-      warehouseId
+        if (cachedStock.source === "redis") {
+          const isAvailable = cachedStock.available >= quantity;
+          
+          // Return exact structure matching DB response
+          return res.json({
+            productId,
+            requestedQuantity: quantity,
+            availableQuantity: cachedStock.available,
+            isAvailable,
+            warehouseId: "ALL",
+            source: "cache"
+          });
+        }
+      } catch (err) {
+        // Log but don't fail request
+        logger.warn({ err }, "⚠️ Redis read failed, falling back to DB");
+      }
+    }
+
+    // ====================================================
+    // 🐢 STEP 2: FALLBACK TO POSTGRES (Slow Path)
+    // ====================================================
+    const dbResult = await inventoryService.checkAvailability({ 
+        productId, 
+        quantity, 
+        warehouseId 
     });
+    
+    return res.json({ ...dbResult, source: "db" });
 
-    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -79,9 +111,6 @@ const checkAvailability = async (req, res, next) => {
 const getProduct = async (req, res, next) => {
   try {
     const { productId } = req.params;
-    // Good for debugging specific product issues
-    logger.debug({ productId }, "Fetching product details"); 
-    
     const product = await inventoryService.getProductDetails(productId);
     res.status(200).json(product);
   } catch (error) {
@@ -95,8 +124,6 @@ const getProduct = async (req, res, next) => {
 const getReservationsByOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
-    logger.info({ orderId }, "🔎 Fetching reservations for order");
-
     const reservations = await inventoryService.getReservationsByOrder(orderId);
     res.status(200).json(reservations);
   } catch (error) {

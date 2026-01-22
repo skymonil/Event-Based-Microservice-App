@@ -20,6 +20,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # ✅ NEW: Redis for Inventory Read Model
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data # Persist cache on restart
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   kafka:
     image: apache/kafka:latest
     container_name: kafka
@@ -104,7 +118,7 @@ services:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME: user-service  # FIXED: Was order-service
+      OTEL_SERVICE_NAME: user-service 
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,7 +160,7 @@ services:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME: payment-service # FIXED: Was order-service
+      OTEL_SERVICE_NAME: payment-service 
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,7 +169,7 @@ services:
     ports:
       - "3002:3002"
 
-  inventory-service:  # FIXED: Indentation (Was 3 spaces, now 2)
+  inventory-service: 
     build: ./services/inventory-service
     container_name: inventory-service
     volumes:
@@ -166,6 +180,9 @@ services:
     environment:
       KAFKA_BROKERS: kafka:29092
       DB_HOST: postgres
+      # ✅ NEW: Point to the Redis Service
+      REDIS_HOST: redis 
+      REDIS_PORT: 6379
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME: inventory-service
     depends_on:
@@ -173,6 +190,9 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      # ✅ NEW: Wait for Redis to be ready
+      redis:
+        condition: service_healthy
     ports:
       - "3003:3003"
 
@@ -184,7 +204,6 @@ services:
     container_name: connector-init
     volumes:
       - ./scripts:/scripts
-    # FIXED: Entrypoint escaping ($ -> $$ for Compose variables)
     entrypoint: >
       /bin/sh -c "
         echo 'Waiting for Kafka Connect to start...';
@@ -216,3 +235,4 @@ services:
 # =======================
 volumes:
   pgdata:
+  redis_data: # ✅ NEW: Volume for Redis persistence

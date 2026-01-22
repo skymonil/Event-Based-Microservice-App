@@ -5,6 +5,7 @@ const config = require('./config/config');
 const { logger } = require('./utils/logger');
 // ✅ Import disconnectConsumer so shutdown doesn't crash
 const { startConsumer, disconnectConsumer } = require("./kafka/consumer"); 
+const { startRedisProjection } = require("./redis/stock-projection.consumer"); 
 const gracefulShutdown = require('http-graceful-shutdown');
 const db = require("./db");
 

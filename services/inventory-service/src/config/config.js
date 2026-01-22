@@ -13,6 +13,11 @@ const config = {
   auth: {
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h"
+  },
+  kafka: {
+    brokers: process.env.KAFKA_BROKERS
+      ? process.env.KAFKA_BROKERS.split(",")
+      : []
   }
 };
 
