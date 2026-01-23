@@ -1,3 +1,4 @@
+// services/payment-service/src/kafka/producer.js
 const {logger} = require('../utils/logger')
 const{ Partitioners }= require('kafkajs')
 const kafka = require('./kafka')

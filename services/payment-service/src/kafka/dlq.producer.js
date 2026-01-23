@@ -1,3 +1,4 @@
+// services/payment-service/src/kafka/dlq.producer.js
 const kafka = require('./kafka')
 const {Partitioners} = require('kafkajs')
 const producer = kafka.producer({

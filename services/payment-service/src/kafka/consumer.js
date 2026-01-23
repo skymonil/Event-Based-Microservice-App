@@ -12,7 +12,7 @@ const { logger } = require("../utils/logger");
 const { sendToDLQ } = require("./dlq.producer");
 const { exponentialBackoff } = require("../utils/backoff");
 
-const { context, propagation, trace } = require("@opentelemetry/api");
+const { context, propagation, trace, SpanStatusCode } = require("@opentelemetry/api");
 const tracer = trace.getTracer("payment-service");
 
 const SERVICE_NAME = "payment-service";
@@ -43,90 +43,103 @@ const startConsumer = async () => {
     }
   }
 
-  await consumer.run({
+ await consumer.run({
     autoCommit: true,
-
     eachMessage: async ({ topic, message, partition }) => {
       kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
-      // Parse the message value
-      const event = JSON.parse(message.value.toString())
-     
-      // 2. 🛰️ Context Extraction from Metadata (instead of Kafka Headers)
-      // Because Debezium puts your metadata inside the JSON payload
-      const extractedContext = propagation.extract(
-        context.active(),
-        message.headers || {}
-      );
+      const payload = JSON.parse(message.value.toString());
+      let contextData = {};
+
+      // 1. Unpack Metadata
+      if (message.headers && message.headers.event_metadata) {
+        try {
+          contextData = JSON.parse(message.headers.event_metadata.toString());
+        } catch (e) {
+          logger.warn("Failed to parse Debezium metadata header", e);
+        }
+      } else if (payload.metadata) {
+        contextData = payload.metadata;
+      }
+
+      const extractedContext = propagation.extract(context.active(), contextData || {});
 
       await context.with(extractedContext, async () => {
         let attempt = 0;
 
         while (attempt <= MAX_RETRIES) {
           try {
-            const spanName = `process ${topic}`
-            await tracer.startActiveSpan(
-              spanName,
-              {
-                attributes: {
-                  "messaging.topic": topic,
-                  "order.id": event.orderId
-                }
-              },
-              async (span) => {
-                 // 3. 🧭 ROUTING LOGIC
-                if (topic === "inventory.reserved" ) {
+            const spanName = `process ${topic}`;
+
+            // 2. Start Span
+            await tracer.startActiveSpan(spanName, {
+              attributes: {
+                "messaging.topic": topic,
+                "order.id": payload.orderId,
+                "retry.attempt": attempt
+              }
+            }, async (span) => {
+              // 🟢 START INTERNAL TRY/CATCH (Scope: Span is available here)
+              try {
+                // 3. Routing Logic
+                if (topic === "inventory.reserved") {
                   await paymentService.processPayment({
-                    orderId: event.orderId,
-                    userId: event.userId,
-                    totalAmount: event.totalAmount,
-                    idempotencyKey: event.idempotencyKey,
-                    currency: event.currency || "INR",
-                    traceHeaders: event.metadata // Pass headers for downstream outbox
+                    orderId: payload.orderId,
+                    userId: payload.userId,
+                    totalAmount: payload.totalAmount,
+                    idempotencyKey: payload.idempotencyKey,
+                    currency: payload.currency || "INR",
+                    traceHeaders: payload.metadata
                   });
-                } 
-                else if (topic === "order.cancel.requested") {
-                  // New logic to handle the Refund
+                } else if (topic === "order.cancel.requested") {
                   await paymentService.processRefund({
-                    orderId: event.orderId,
-                    userId: event.userId,
-                    idempotencyKey: event.idempotencyKey,
-                    traceHeaders: event.metadata
+                    orderId: payload.orderId,
+                    userId: payload.userId,
+                    idempotencyKey: payload.idempotencyKey,
+                    traceHeaders: payload.metadata
                   });
                 }
+
+                // Success!
+                span.setStatus({ code: SpanStatusCode.OK });
+
+              } catch (innerErr) {
+                // 🔴 Record Error on Span (Span is accessible!)
+                span.recordException(innerErr);
+                span.setStatus({ code: SpanStatusCode.ERROR, message: innerErr.message });
+                throw innerErr; // Re-throw to trigger the outer retry loop
+
+              } finally {
+                // 🏁 End Span (Span is accessible!)
                 span.end();
               }
-            );
+            });
 
-            // ✅ Success → exit retry loop
-            return;
+            return; // Success! Exit the while loop
+
           } catch (err) {
+            // 🟡 OUTER CATCH: Handle Retry Flow (Span is NOT accessible here)
             attempt++;
             kafkaRetries.inc({ topic, service: SERVICE_NAME });
 
-            // 🛑 Infrastructure failure → pause consumer
+            // 🛑 Infrastructure failure -> pause consumer
             if (err.isSystemic) {
               logger.error("Systemic failure detected. Pausing consumer.");
-
               consumerPaused.set({ topic, service: SERVICE_NAME }, 1);
               consumer.pause([{ topic, partition }]);
-
               setTimeout(() => {
                 consumer.resume([{ topic, partition }]);
                 consumerPaused.set({ topic, service: SERVICE_NAME }, 0);
-                logger.info("Consumer resumed after infra pause");
               }, 30000);
-
               return;
             }
 
-            // 🔁 Retry with backoff
             if (attempt <= MAX_RETRIES) {
               await exponentialBackoff(attempt);
-              continue;
+              continue; // Retry loop
             }
 
-            // ☠️ Terminal failure → DLQ
+            // ☠️ Terminal failure -> DLQ
             kafkaDLQ.inc({ topic, service: SERVICE_NAME });
             await sendToDLQ({ topic, message, error: err });
             return;
@@ -136,5 +149,6 @@ const startConsumer = async () => {
     }
   });
 };
+
 
 module.exports = { startConsumer };

@@ -7,7 +7,12 @@ const { AppError, BusinessError, InfraError } = require("../utils/app-error")
 const kafka = new Kafka({
   clientId: "inventory-service",
   brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
+   retry: {
+    initialRetryTime: 300, // Wait 300ms
+    retries: 10            // Try 10 times before crashing
+  }
 });
+
 
 const consumer = kafka.consumer({ groupId: "inventory-group",
    sessionTimeout: 30000,
@@ -26,7 +31,8 @@ const startConsumer = async () => {
       // Subscribe to relevant topics
       await consumer.subscribe({ 
         topics: ["order.created", "payment.failed", "order.cancelled","payment.refunded"], 
-        fromBeginning: false 
+        fromBeginning: false,
+        allowAutoTopicCreation: true
       });
       connected = true;
       logger.info("✅ Inventory Consumer connected and subscribed");
@@ -38,40 +44,34 @@ const startConsumer = async () => {
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-        let orderId = "unknown";
-      // ---------------------------------------------------------
-      // 🛠️ FIX: Debezium Header Unpacking
-      // Debezium sends metadata as a single JSON string in 'event_metadata'
-      // We must unpack 'traceparent' to the root so OpenTelemetry sees it.
-      // ---------------------------------------------------------
-      const headers = message.headers || {};
-      
-      if (headers.event_metadata) {
-        try {
-          // Debezium headers are Buffers, so we toString() first
-          const metadataFunc = JSON.parse(headers.event_metadata.toString());
-          
-          // Hoist the trace headers to the top level
-          if (metadataFunc.traceparent) {
-            headers.traceparent = metadataFunc.traceparent;
-          }
-          if (metadataFunc.tracestate) {
-            headers.tracestate = metadataFunc.tracestate;
-          }
-        } catch (parseErr) {
-          logger.warn({ err: parseErr.message }, "⚠️ Failed to parse Debezium event_metadata");
-        }
-      }
-      // ---------------------------------------------------------
+      const payload = JSON.parse(message.value.toString());
+        let contextData = {};
 
-      // 1. Extract Trace Context (Now it will find 'traceparent' correctly)
-      const extractedContext = propagation.extract(
-        context.active(),
-        headers
-      );
+          if (message.headers && message.headers.event_metadata) {
+      try {
+        // Headers are Buffers, convert to String -> JSON
+        const metadataStr = message.headers.event_metadata.toString();
+        contextData = JSON.parse(metadataStr);
+      } catch (e) {
+        logger.warn("Failed to parse Debezium metadata header", e);
+      }
+    } 
+    // 2. Fallback: Check Payload (In case you used the Producer fix)
+    else if (payload.metadata) {
+      contextData = payload.metadata;
+    }
+
+       const extractedContext = propagation.extract(
+      context.active(),
+      contextData || {}
+    );
+        let orderId = "unknown";
+      
+    
 
       await context.with(extractedContext, async () => {
         await tracer.startActiveSpan(`process ${topic}`, async (span) => {
+          
           try {
             const payload = JSON.parse(message.value.toString());
             const { orderId } = payload;

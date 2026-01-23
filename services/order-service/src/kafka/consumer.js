@@ -7,8 +7,8 @@ const {
 const kafka = require("./kafka");
 const orderService = require("../services/order.service");
 const { sendToDLQ } = require("./dlq.producer");
-const { context, propagation, trace } = require("@opentelemetry/api");
-const {}= require('../db/queries/order.queries')
+const { logger } = require("../utils/logger");
+const { context, propagation, trace, SpanStatusCode } = require("@opentelemetry/api");
 const tracer = trace.getTracer("order-service");
 const SERVICE_NAME = "order-service";
 
@@ -58,7 +58,7 @@ const startConsumer = async () => {
     // ✅ Restore trace context
     const extractedContext = propagation.extract(
       context.active(),
-      message.headers || {}
+      event.metadata || {}
     );
 
     await context.with(extractedContext, async () => {
@@ -91,6 +91,8 @@ const startConsumer = async () => {
           span.end();
         });
       } catch (err) {
+           span.recordException(err);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
         if (isInfraError(err)) {
           consumerPaused.set({ topic, service: SERVICE_NAME }, 1);
           consumer.pause([{ topic }]);

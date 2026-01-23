@@ -7,6 +7,7 @@ const {
 } = require("@opentelemetry/exporter-trace-otlp-http");
 
 const sdk = new NodeSDK({
+    serviceName: "payment-service",
   traceExporter: new OTLPTraceExporter({
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT
   }),

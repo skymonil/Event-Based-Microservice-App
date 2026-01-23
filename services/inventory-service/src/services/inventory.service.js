@@ -4,11 +4,15 @@ const { BusinessError, InfraError, AppError } = require("../utils/app-error");
 const { logger } = require("../utils/logger");
 const db = require("../db/index"); 
 const metrics = require("../utils/metrics");
+const { propagation, context } = require("@opentelemetry/api");
 
 /**
  * Create a new product in the catalog
  */
 const createProduct = async ({ id, name, sku }) => {
+   const traceHeaders = {};
+  propagation.inject(context.active(), traceHeaders);
+
   const client = await db.connect();
   
   try {
@@ -39,7 +43,9 @@ const createProduct = async ({ id, name, sku }) => {
           sku, 
           stock: { total: 0, available: 0 } 
       },
-      metadata: { source: "inventory-service" }
+      metadata: { 
+        ...traceHeaders,
+        source: "inventory-service" }
     }, client);
 
     await client.query("COMMIT");
@@ -58,6 +64,8 @@ const createProduct = async ({ id, name, sku }) => {
  * Adjust stock levels (SET or ADD)
  */
 const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
+   const traceHeaders = {};
+  propagation.inject(context.active(), traceHeaders);
   const client = await db.connect();
   
   try {
@@ -88,7 +96,8 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
         total: result.total_quantity,
         available: result.available_quantity
       },
-      metadata: { source: "inventory-service" }
+      metadata: {...traceHeaders,
+          source: "inventory-service" }
     }, client);
 
     await client.query("COMMIT");
@@ -158,6 +167,8 @@ const getReservationsByOrder = async (orderId) => {
  * CORE SAGA LOGIC: Reserve Stock
  */
 const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
+  const traceHeaders = {};
+propagation.inject(context.active(), traceHeaders);
   const client = await db.connect();
 
   try {
@@ -233,7 +244,9 @@ const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
           status: "RESERVED", 
           totalAmount 
       },
-      metadata: { source: "inventory-service" }
+      metadata: {
+          ...traceHeaders,
+         source: "inventory-service" }
     }, client);
 
     // ✅ STEP 3: MARK COMPLETE
@@ -272,6 +285,8 @@ const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
  * COMPENSATING ACTION: Release Stock
  */
 const releaseStock = async (orderId) => {
+    const traceHeaders = {};
+propagation.inject(context.active(), traceHeaders);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -309,7 +324,10 @@ const releaseStock = async (orderId) => {
         aggregate_id: orderId,
         event_type: "inventory.released",
         payload: { orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
-        metadata: { source: "inventory-service" }
+        metadata: {
+        ...traceHeaders,
+        source: "inventory-service" 
+     }
       }, client);
     }
 

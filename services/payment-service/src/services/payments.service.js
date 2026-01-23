@@ -74,7 +74,7 @@ const getPaymentsForUser = async (userId) => {
 };
 
 const processPayment = async ({ orderId, userId, totalAmount, currency = "INR", traceHeaders = {} }) => {
-  const logContext = { orderId, userId, totalAmount };
+  const logContext = { orderId, userId, totalAmount, traceHeaders };
 
   const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
   if (existingRows && existingRows.length > 0) {
@@ -96,7 +96,7 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR", 
 
   try {
     logger.info(
-      { ...logContext, paymentId, paymentStatus, eventType },
+      { ...logContext, paymentId, paymentStatus, eventType, ...traceHeaders },
       `Initiating payment transaction: Result will be ${paymentStatus}`
     );
 
