@@ -25,10 +25,7 @@
     "transforms.outbox.table.field.event.key": "aggregate_id",
     "transforms.outbox.table.field.event.payload": "payload",
     "transforms.outbox.table.expand.json.payload": "true",
-    "transforms.outbox.table.fields.additional.placement": "metadata:header:event_metadata",
-
-    "transforms.extractMetadata.field": "event_metadata",
-
+    "transforms.outbox.table.fields.additional.placement": "traceparent:header,tracestate:header",
 
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false",

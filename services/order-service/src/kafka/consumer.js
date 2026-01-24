@@ -58,7 +58,7 @@ const startConsumer = async () => {
     // ✅ Restore trace context
     const extractedContext = propagation.extract(
       context.active(),
-      event.metadata || {}
+      message.headers || {}
     );
 
     await context.with(extractedContext, async () => {

@@ -4,14 +4,13 @@ const { BusinessError, InfraError, AppError } = require("../utils/app-error");
 const { logger } = require("../utils/logger");
 const db = require("../db/index"); 
 const metrics = require("../utils/metrics");
-const { propagation, context } = require("@opentelemetry/api");
-
+const { propagation, context, trace } = require("@opentelemetry/api");
+const tracer = trace.getTracer("inventory-service");
 /**
  * Create a new product in the catalog
  */
 const createProduct = async ({ id, name, sku }) => {
-   const traceHeaders = {};
-  propagation.inject(context.active(), traceHeaders);
+  
 
   const client = await db.connect();
   
@@ -43,8 +42,8 @@ const createProduct = async ({ id, name, sku }) => {
           sku, 
           stock: { total: 0, available: 0 } 
       },
-      metadata: { 
-        ...traceHeaders,
+      metadata: {
+        
         source: "inventory-service" }
     }, client);
 
@@ -64,8 +63,7 @@ const createProduct = async ({ id, name, sku }) => {
  * Adjust stock levels (SET or ADD)
  */
 const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
-   const traceHeaders = {};
-  propagation.inject(context.active(), traceHeaders);
+   
   const client = await db.connect();
   
   try {
@@ -90,13 +88,16 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
       aggregate_type: "INVENTORY",
       aggregate_id: productId,
       event_type: "stock.adjusted",
+       
       payload: {
         event_type: "stock.adjusted",
         productId,
         total: result.total_quantity,
         available: result.available_quantity
       },
-      metadata: {...traceHeaders,
+      
+      metadata: {
+        
           source: "inventory-service" }
     }, client);
 
@@ -163,15 +164,20 @@ const getReservationsByOrder = async (orderId) => {
   return await inventoryQueries.getReservationsByOrderId(orderId);
 };
 
-/**
- * CORE SAGA LOGIC: Reserve Stock
- */
 const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
-  const traceHeaders = {};
-propagation.inject(context.active(), traceHeaders);
+
+
+    return await tracer.startActiveSpan("inventory.reserveStock", async (span) => {
+    
+   
   const client = await db.connect();
 
   try {
+   const headers = {};
+  propagation.inject(context.active(), headers || {});
+
+//Print Headers
+logger.debug({ headers }, "Tracing headers for reserveStock");
     await client.query("BEGIN");
 
     // 🛑 STEP 1: CLAIM ORDER
@@ -236,6 +242,8 @@ propagation.inject(context.active(), traceHeaders);
       aggregate_type: "INVENTORY",
       aggregate_id: orderId,
       event_type: "inventory.reserved",
+       traceparent: headers.traceparent,
+      tracestate: headers.tracestate,
       payload: { 
         event_type: "inventory.reserved",
           orderId, 
@@ -244,9 +252,9 @@ propagation.inject(context.active(), traceHeaders);
           status: "RESERVED", 
           totalAmount 
       },
+     
       metadata: {
-          ...traceHeaders,
-         source: "inventory-service" }
+          source: "inventory-service" }
     }, client);
 
     // ✅ STEP 3: MARK COMPLETE
@@ -277,16 +285,20 @@ propagation.inject(context.active(), traceHeaders);
     logger.warn({ orderId, err: error.message }, "❌ Reservation failed");
     return { success: false, reason: error.detail || error.message };
   } finally {
+    span.end();
     client.release();
   }
-};
+    });
+  }
+  
+;
+
 
 /**
  * COMPENSATING ACTION: Release Stock
  */
 const releaseStock = async (orderId) => {
-    const traceHeaders = {};
-propagation.inject(context.active(), traceHeaders);
+  
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -324,8 +336,8 @@ propagation.inject(context.active(), traceHeaders);
         aggregate_id: orderId,
         event_type: "inventory.released",
         payload: { orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
+      
         metadata: {
-        ...traceHeaders,
         source: "inventory-service" 
      }
       }, client);

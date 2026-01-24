@@ -65,7 +65,9 @@ const createOrder = async ({
       userId,
       totalAmount,
       status: "CREATED",
-      isDuplicate: false
+      isDuplicate: false,
+      createdAt: new Date().toISOString()
+      
   };
   }
   catch (err) {

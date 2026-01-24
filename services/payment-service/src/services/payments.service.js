@@ -73,8 +73,10 @@ const getPaymentsForUser = async (userId) => {
   }));
 };
 
-const processPayment = async ({ orderId, userId, totalAmount, currency = "INR", traceHeaders = {} }) => {
-  const logContext = { orderId, userId, totalAmount, traceHeaders };
+const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }) => {
+  const traceHeaders = {};
+  propagation.inject(context.active(), traceHeaders || {});
+  const logContext = { orderId, userId, totalAmount, };
 
   const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
   if (existingRows && existingRows.length > 0) {
@@ -117,7 +119,7 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR", 
       aggregate_id: orderId,
       event_type: eventType,
       payload: { paymentId, orderId, userId,  totalAmount, status: paymentStatus },
-      metadata: traceHeaders
+     metadata: { ...traceHeaders, "idempotency-key": paymentId }
     }, client);
 
     await client.query("COMMIT");

@@ -13,8 +13,8 @@ const connectProducer = async () => {
 
 
 const preparePaymentEvent = (event, eventType) => {
-  const traceHeaders = {};
-  propagation.inject(context.active(), traceHeaders);
+  const headers = {};
+  propagation.inject(context.active(), headers || {});
 
   logger.info(`Preparing ${eventType} outbox event for Order: ${event.orderId}`);
 
@@ -31,8 +31,9 @@ const preparePaymentEvent = (event, eventType) => {
       provider: "MOCK",
       occurredAt: new Date().toISOString()
     },
+    traceparent: headers.traceparent,
+    tracestate: headers.tracestate,
     metadata: {
-      ...traceHeaders,
       'x-request-id': event.requestId,
       'x-source-service': 'payment-service'
     }

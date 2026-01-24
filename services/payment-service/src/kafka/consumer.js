@@ -49,20 +49,10 @@ const startConsumer = async () => {
       kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
       const payload = JSON.parse(message.value.toString());
-      let contextData = {};
-
+      const extractedContext = propagation.extract(context.active(), message.headers || {});
+      
       // 1. Unpack Metadata
-      if (message.headers && message.headers.event_metadata) {
-        try {
-          contextData = JSON.parse(message.headers.event_metadata.toString());
-        } catch (e) {
-          logger.warn("Failed to parse Debezium metadata header", e);
-        }
-      } else if (payload.metadata) {
-        contextData = payload.metadata;
-      }
-
-      const extractedContext = propagation.extract(context.active(), contextData || {});
+    
 
       await context.with(extractedContext, async () => {
         let attempt = 0;
@@ -89,14 +79,14 @@ const startConsumer = async () => {
                     totalAmount: payload.totalAmount,
                     idempotencyKey: payload.idempotencyKey,
                     currency: payload.currency || "INR",
-                    traceHeaders: payload.metadata
+                   
                   });
                 } else if (topic === "order.cancel.requested") {
                   await paymentService.processRefund({
                     orderId: payload.orderId,
                     userId: payload.userId,
                     idempotencyKey: payload.idempotencyKey,
-                    traceHeaders: payload.metadata
+                   
                   });
                 }
 

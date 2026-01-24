@@ -21,10 +21,10 @@ const createOutboxEntry = async (entry, client = db) => {
   
   // PostgreSQL 'pg' driver will handle objects for JSONB columns automatically
   const result = await client.query(
-    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata, traceparent, tracestate)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, created_at`,
-    [aggregate_type, aggregate_id, event_type, payload, metadata]
+    [aggregate_type, aggregate_id, event_type, payload, metadata, entry.traceparent, entry.tracestate]
   )
   return result.rows[0];;
 };

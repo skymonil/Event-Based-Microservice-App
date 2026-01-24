@@ -2,7 +2,7 @@
 const kafka = require("../kafka");
 const redis = require("./client");
 const { logger } = require("../utils/logger");
-
+const {extractKafkaContext} = require("../tracing/kafka-context");
 const consumer = kafka.consumer({
   groupId: "inventory-stock-projection"
 });
@@ -11,6 +11,10 @@ const tracer = trace.getTracer("inventory-redis-projection");
 
 
 const startRedisProjection = async () => {
+  let connected = false;
+  // 🛡️ Retry Loop for Infra startup
+  while (!connected) {
+    try {
   await consumer.connect();
   await consumer.subscribe({
     topics: [
@@ -20,36 +24,26 @@ const startRedisProjection = async () => {
       "inventory.expired",
       "stock.adjusted"
     ],
-    fromBeginning: true // 🔥 allows rebuild
+    fromBeginning: false// 🔥 allows rebuild
   });
+
+  connected = true;
+  logger.info("✅ Redis Stock Projection Consumer connected and subscribed");
+} catch (err) {
+  logger.error({ err }, "❌ Failed to connect to Kafka, retrying in 5s...");
+  await new Promise((r) => setTimeout(r, 5000));
+}
+
+  }
 
  await consumer.run({
   eachMessage: async ({ topic, message }) => {
     // 1. Parse payload
-    const payload = JSON.parse(message.value.toString());
-      let contextData = {};
+      const payload = JSON.parse(message.value.toString());
+      const extractedContext = extractKafkaContext(message)
 
       // 1. Try to find Tracing Data in the Headers (Where Debezium put it)
-    if (message.headers && message.headers.event_metadata) {
-      try {
-        // Headers are Buffers, convert to String -> JSON
-        const metadataStr = message.headers.event_metadata.toString();
-        contextData = JSON.parse(metadataStr);
-      } catch (e) {
-        logger.warn("Failed to parse Debezium metadata header", e);
-      }
-    } 
-    // 2. Fallback: Check Payload (In case you used the Producer fix)
-    else if (payload.metadata) {
-      contextData = payload.metadata;
-    }
-
-    // 2. Extract Distributed Tracing Context
-    const extractedContext = propagation.extract(
-      context.active(),
-      contextData || {}
-    );
-
+  
     const eventType = payload.event_type;
     const { items, orderId } = payload;
 

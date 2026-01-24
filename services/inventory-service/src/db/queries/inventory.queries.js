@@ -145,11 +145,11 @@ const getReservationsByOrderId = async (orderId) => {
 
 // A. Outbox Pattern
 const createOutboxEntry = async (entry, client) => {
-  const { aggregate_type, aggregate_id, event_type, payload, metadata } = entry;
+  const { aggregate_type, aggregate_id, event_type, payload, metadata, traceparent, tracestate } = entry;
   await client.query(
-    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [aggregate_type, aggregate_id, event_type, payload, metadata]
+    `INSERT INTO outbox (aggregate_type, aggregate_id, event_type, payload, metadata, traceparent, tracestate)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [aggregate_type, aggregate_id, event_type, payload, metadata, traceparent, tracestate]
   );
 };
 

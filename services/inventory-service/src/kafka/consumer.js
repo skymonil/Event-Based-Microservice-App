@@ -4,6 +4,7 @@ const { trace, context, propagation } = require("@opentelemetry/api");
 const inventoryService = require("../services/inventory.service");
 const { logger } = require("../utils/logger");
 const { AppError, BusinessError, InfraError } = require("../utils/app-error")
+const {extractKafkaContext} = require("../tracing/kafka-context");
 const kafka = new Kafka({
   clientId: "inventory-service",
   brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
@@ -45,35 +46,20 @@ const startConsumer = async () => {
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       const payload = JSON.parse(message.value.toString());
-        let contextData = {};
+      const extractedContext = extractKafkaContext(message)
 
-          if (message.headers && message.headers.event_metadata) {
-      try {
-        // Headers are Buffers, convert to String -> JSON
-        const metadataStr = message.headers.event_metadata.toString();
-        contextData = JSON.parse(metadataStr);
-      } catch (e) {
-        logger.warn("Failed to parse Debezium metadata header", e);
-      }
-    } 
-    // 2. Fallback: Check Payload (In case you used the Producer fix)
-    else if (payload.metadata) {
-      contextData = payload.metadata;
-    }
-
-       const extractedContext = propagation.extract(
-      context.active(),
-      contextData || {}
-    );
         let orderId = "unknown";
       
     
 
       await context.with(extractedContext, async () => {
         await tracer.startActiveSpan(`process ${topic}`, async (span) => {
-          
+       
           try {
-            const payload = JSON.parse(message.value.toString());
+            span.setAttribute("messaging.system", "kafka");
+            span.setAttribute("messaging.destination", topic);
+            span.setAttribute("order.id", payload.orderId || "N/A");
+
             const { orderId } = payload;
             
             span.setAttribute("order.id", orderId);
@@ -160,7 +146,8 @@ const handleOrderCreated = async (payload) => {
     orderId,
     items,
     totalAmount,
-    userId
+    userId,
+    
   });
 
   if (!result.success) {

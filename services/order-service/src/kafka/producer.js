@@ -1,10 +1,10 @@
 const kafka = require('./kafka')
 const {logger} = require('../utils/logger')
-const { context, propagation } = require("@opentelemetry/api");
+const {trace, context, propagation } = require("@opentelemetry/api");
 
 const prepareOrderCreatedEvent = (event) => {
-  const traceHeaders = {};
-  propagation.inject(context.active(), traceHeaders);
+  const headers = {};
+  propagation.inject(context.active(), headers || {});
 
   logger.info(`Preparing outbox event for Order: ${event.orderId}`);
 
@@ -12,6 +12,8 @@ const prepareOrderCreatedEvent = (event) => {
     aggregate_type: 'ORDER',
     aggregate_id: event.orderId,
     event_type: 'order.created', // This maps to the Kafka Topic Name via Debezium SMT
+      traceparent: headers.traceparent,
+      tracestate: headers.tracestate,
     payload: {
       orderId: event.orderId,
       userId: event.userId,
@@ -19,8 +21,10 @@ const prepareOrderCreatedEvent = (event) => {
       items: event.items,
       createdAt: event.createdAt
     },
+    
     metadata: {
-      ...traceHeaders,
+      traceparent: headers.traceparent,
+    tracestate: headers.tracestate,
       'x-request-id': event.requestId,
       'idempotency-key': event.idempotencyKey,
     }
