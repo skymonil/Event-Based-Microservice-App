@@ -298,7 +298,16 @@ logger.debug({ headers }, "Tracing headers for reserveStock");
  * COMPENSATING ACTION: Release Stock
  */
 const releaseStock = async (orderId) => {
-  
+
+  const extractedContext = propagation.extract(context.active(), {});
+  return await context.with(extractedContext, async () =>
+
+  tracer.startActiveSpan("inventory.releaseStock", async (span) => {
+    const headers = {};
+  propagation.inject(context.active(), headers || {});
+    span.setAttribute("order.id", orderId);
+    logger.info({ orderId }, "Starting stock release process");
+
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -335,6 +344,8 @@ const releaseStock = async (orderId) => {
         aggregate_type: "INVENTORY",
         aggregate_id: orderId,
         event_type: "inventory.released",
+        traceparent: headers.traceparent,
+        tracestate: headers.tracestate,
         payload: { orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
       
         metadata: {
@@ -352,18 +363,27 @@ const releaseStock = async (orderId) => {
     throw err;
   } finally {
     client.release();
+    span.end();
   }
-};
+}))}
+;
 
 const handleReservationFailed = async ({ orderId, reason }) => {
+  const extractedContext = propagation.extract(context.active(), {});
+  return await context.with(extractedContext, async () => {
+
   const client = await db.connect();
   try {
+    const headers = {};
+    propagation.inject(context.active(), headers || {});
     logger.warn({ orderId, reason }, "📢 Publishing 'inventory.reservation.failed' event");
 
     await inventoryQueries.createOutboxEntry({
       aggregate_type: "INVENTORY",
       aggregate_id: orderId,
       event_type: "inventory.reservation.failed",
+      traceparent: headers.traceparent,
+      tracestate: headers.tracestate,
       payload: { orderId, reason },
       metadata: { source: "inventory-service" }
     }, client);
@@ -373,7 +393,9 @@ const handleReservationFailed = async ({ orderId, reason }) => {
     throw err;
   } finally {
     client.release();
+    span.end();
   }
+});
 };
 
 module.exports = {

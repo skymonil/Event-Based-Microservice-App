@@ -251,11 +251,13 @@ const handlePaymentFailed = async(orderId,paymentId,reason) =>{
     orderId,
     "PAYMENT_FAILED"
   )
+  span.setStatus({ code: SpanStatusCode.OK });
 }
 catch (err) {
       span.recordException(err);
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      throw err;
+span.setStatus({
+code: SpanStatusCode.ERROR,
+message: err.message})
    }finally{
       span.end();
    }})
