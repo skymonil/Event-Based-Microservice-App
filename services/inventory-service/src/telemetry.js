@@ -9,6 +9,7 @@ const {
 const sdk = new NodeSDK({
   serviceName: "inventory-service",
   traceExporter: new OTLPTraceExporter({
+    serviceName: "inventory-service",
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT
   }),
   instrumentations: [getNodeAutoInstrumentations()]

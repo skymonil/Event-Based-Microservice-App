@@ -1,3 +1,4 @@
+require("../telemetry");
 const http = require("http");
 const gracefulShutdown = require("http-graceful-shutdown");
 

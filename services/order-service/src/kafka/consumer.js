@@ -9,6 +9,7 @@ const orderService = require("../services/order.service");
 const { sendToDLQ } = require("./dlq.producer");
 const { logger } = require("../utils/logger");
 const { context, propagation, trace, SpanStatusCode } = require("@opentelemetry/api");
+const {extractKafkaContext} = require("../tracing/kafka-context");
 const tracer = trace.getTracer("order-service");
 const SERVICE_NAME = "order-service";
 
@@ -56,10 +57,7 @@ const startConsumer = async () => {
   
 
     // ✅ Restore trace context
-    const extractedContext = propagation.extract(
-      context.active(),
-      message.headers || {}
-    );
+    const extractedContext = extractKafkaContext(message);
 
     await context.with(extractedContext, async () => {
       try {
@@ -84,7 +82,7 @@ const startConsumer = async () => {
             await orderService.handlePaymentRefunded({
               orderId: event.orderId,
               paymentId: event.paymentId,
-              traceHeaders: message.headers || {}
+              
             });
           }
 

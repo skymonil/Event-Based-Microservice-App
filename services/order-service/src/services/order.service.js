@@ -4,7 +4,8 @@ const { prepareOrderCreatedEvent } = require("../kafka/producer");
 const AppError = require("../utils/app-error");
 const db = require("../db"); // Import the DB pool to start transactions
 const {logger} = require('../utils/logger');
-
+const {trace, SpanStatusCode, context, propagation} = require("@opentelemetry/api");
+const tracer = trace.getTracer("order-service");
 /**
  * Create a new order
  */
@@ -15,12 +16,17 @@ const createOrder = async ({
   idempotencyKey,
   requestId
 }) => {
+
+    return tracer.startActiveSpan("order.create", async (span) => {
+      span.setAttribute("user.id", userId);
+    span.setAttribute("order.amount", totalAmount);
   // 🔁 Idempotency check
   if (idempotencyKey) {
     const existing =
       await orderQueries.getOrderByIdempotencyKey(idempotencyKey);
 
     if (existing) {
+      span.end();
       return {
         ...existing,
         isDuplicate: true
@@ -75,7 +81,9 @@ const createOrder = async ({
     throw err; // Let the controller/middleware handle the error
   } finally {
     client.release();
+    span.end();
   }
+})
 };
 
 /**
@@ -113,7 +121,8 @@ const getOrderById = async (orderId, userId) => {
 };
 
 const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) => {
-  
+  return tracer.startActiveSpan("order.cancel", async (span) => {
+     span.setAttribute("order.id", orderId);
   const client = await db.connect()
   const logContext = { orderId, userId, idempotencyKey };
 
@@ -179,6 +188,8 @@ const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) 
       aggregate_type: "ORDER",
       aggregate_id: orderId,
       event_type: eventType,
+     traceparent: traceHeaders.traceparent, 
+      tracestate: traceHeaders.tracestate,
       payload: { orderId, userId,reason: "USER_CANCELLED" ,originalStatus: order.status },
       metadata: { ...traceHeaders, "idempotency-key": idempotencyKey }
     }, client);
@@ -192,8 +203,8 @@ const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) 
   } finally{
     client.release()
   }
+})
 }
-
 /**
  * Get all orders for a user
  */
@@ -209,19 +220,46 @@ const getOrdersForUser = async (userId) => {
 };
 
 const handlePaymentCompleted = async(orderId,paymentId) =>{
+   return tracer.startActiveSpan("order.handlePaymentCompleted", async (span) => {
+     span.setAttribute("order.id", orderId);
+    span.setAttribute("payment.id", paymentId);
    logger.info({ orderId, paymentId }, "Handling payment completion");
-  await orderQueries.updateOrderStatus(
+   try {
+     await orderQueries.updateOrderStatus(
     orderId,
     "PAID"
   )
+   span.setStatus({ code: SpanStatusCode.OK });
+   } catch (err) {
+     span.recordException(err);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+   }finally{
+      span.end();
+   }
+ })
 }
+
 const handlePaymentFailed = async(orderId,paymentId,reason) =>{
   logger.warn({ orderId, paymentId, reason }, "Handling payment failure");
+
+  return tracer.startActiveSpan("order.handlePaymentFailed", async (span) => {
+    span.setAttribute("order.id", orderId);
+    span.setAttribute("payment.id", paymentId);
+    try {
   await orderQueries.updateOrderStatus(
     orderId,
     "PAYMENT_FAILED"
   )
 }
+catch (err) {
+      span.recordException(err);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+   }finally{
+      span.end();
+   }})
+  }
 
 const healthCheck = async () => {
   await orderQueries.ping(); // SELECT 1
@@ -246,6 +284,8 @@ const handlePaymentRefunded = async({orderId, traceHeaders}) =>{
       aggregate_type: "ORDER",
       aggregate_id: orderId,
       event_type: "order.refunded",
+       traceparent: traceHeaders.traceparent,
+      tracestate: traceHeaders.tracestate, 
       payload: { orderId, status: "CANCELLED" },
       metadata: traceHeaders
     }, client);

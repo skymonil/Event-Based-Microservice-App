@@ -9,6 +9,7 @@ const {
 const sdk = new NodeSDK({
     serviceName: "payment-service",
   traceExporter: new OTLPTraceExporter({
+    serviceName: "payment-service",
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT
   }),
   instrumentations: [getNodeAutoInstrumentations()]

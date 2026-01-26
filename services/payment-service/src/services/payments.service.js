@@ -4,9 +4,12 @@ const paymentQueries = require("../db/queries/payments.queries");
 const AppError = require("../utils/app-error");
 const db = require('../db');
 const { logger } = require("../utils/logger");
+const { context, propagation, trace, SpanStatusCode } = require("@opentelemetry/api");
+  const tracer = trace.getTracer("payment-service");
 
 const getPaymentsByOrder = async (orderId, userId) => {
   const payments = await paymentQueries.getPaymentsByOrderId(orderId);
+
 
   // FIX 1: Corrected logic flow. 
   // Previously, you logged info if empty, but then immediately tried to access payments[0], which would crash.
@@ -74,9 +77,15 @@ const getPaymentsForUser = async (userId) => {
 };
 
 const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }) => {
+  return tracer.startActiveSpan("payment.process", async (span) => {
+     span.setAttribute("order.id", orderId);
+    span.setAttribute("user.id", userId);
+    span.setAttribute("payment.amount", totalAmount);
+    span.setAttribute("payment.currency", currency);
+     const traceId = span.spanContext().traceId;
   const traceHeaders = {};
   propagation.inject(context.active(), traceHeaders || {});
-  const logContext = { orderId, userId, totalAmount, };
+  const logContext = { orderId, userId, totalAmount, ...traceHeaders,trace_id: traceId };
 
   const existingRows = await paymentQueries.getPaymentsByOrderId(orderId);
   if (existingRows && existingRows.length > 0) {
@@ -89,6 +98,7 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }
   }
 
   logger.debug({ orderId }, "Determining mock payment outcome...");
+  span.setAttribute("order.id", orderId);
   const paymentSucceeded = parseInt(orderId.replace(/-/g, "").slice(0, 2), 16) % 2 === 0;
   const paymentStatus = paymentSucceeded ? "SUCCESS" : "FAILED";
   const eventType = paymentSucceeded ? "payment.completed" : "payment.failed";
@@ -119,6 +129,9 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }
       aggregate_id: orderId,
       event_type: eventType,
       payload: { paymentId, orderId, userId,  totalAmount, status: paymentStatus },
+            traceparent: traceHeaders.traceparent,  // ⭐ ADD THIS
+      tracestate: traceHeaders.tracestate,    // ⭐ ADD THIS
+
      metadata: { ...traceHeaders, "idempotency-key": paymentId }
     }, client);
 
@@ -129,6 +142,8 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }
 
   } catch (err) {
     await client.query("ROLLBACK"); // FIX: await rollback directly
+span.recordException(err);
+  span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
 
     if (err.code === '23505') {
       logger.warn(
@@ -146,10 +161,16 @@ const processPayment = async ({ orderId, userId, totalAmount, currency = "INR" }
     throw err;
   } finally {
     client.release();
+    span.end();
   }
-};
+
+});
+}
 
 const processRefund = async ({ orderId, userId, traceHeaders }) => {
+  const tracer = trace.getTracer("payment-service");
+  return tracer.startActiveSpan("process refund", async (span) => {
+
   const client = await db.connect();
 
   try {
@@ -165,7 +186,8 @@ const processRefund = async ({ orderId, userId, traceHeaders }) => {
       await client.query("ROLLBACK");
       return;
     }
-
+    
+    span.setAttribute("paymnent.id", payment.id);
     await paymentQueries.markRefunded(payment.id, client);
 
     await paymentQueries.createOutboxEntry({
@@ -177,6 +199,8 @@ const processRefund = async ({ orderId, userId, traceHeaders }) => {
         paymentId: payment.id,
         amount: payment.amount
       },
+      traceparent: traceHeaders.traceparent,
+      tracestate: traceHeaders.tracestate,
       metadata: traceHeaders
     }, client);
 
@@ -190,6 +214,7 @@ const processRefund = async ({ orderId, userId, traceHeaders }) => {
   } finally {
     client.release();
   }
+})
 };
 
 module.exports = {

@@ -11,6 +11,7 @@ const paymentService = require("../services/payments.service");
 const { logger } = require("../utils/logger");
 const { sendToDLQ } = require("./dlq.producer");
 const { exponentialBackoff } = require("../utils/backoff");
+const { extractKafkaContext } = require("../tracing/kafka-context"); // ⭐ ADD THIS
 
 const { context, propagation, trace, SpanStatusCode } = require("@opentelemetry/api");
 const tracer = trace.getTracer("payment-service");
@@ -49,7 +50,7 @@ const startConsumer = async () => {
       kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
 
       const payload = JSON.parse(message.value.toString());
-      const extractedContext = propagation.extract(context.active(), message.headers || {});
+           const extractedContext = extractKafkaContext(message);
       
       // 1. Unpack Metadata
     
