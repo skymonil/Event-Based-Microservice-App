@@ -346,7 +346,7 @@ const releaseStock = async (orderId) => {
         event_type: "inventory.released",
         traceparent: headers.traceparent,
         tracestate: headers.tracestate,
-        payload: { orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
+        payload: {event_type: "inventory.released", orderId, reason: "Payment Failed / Cancelled", items: releasedDetails },
       
         metadata: {
         source: "inventory-service" 
