@@ -1,15 +1,3 @@
-Nice — since you already separated **app repo (services code)** and **GitOps repo (k8s manifests)**, your README should:
-
-✔ Explain architecture clearly
-✔ Show event-driven + saga + tracing
-✔ Point to GitOps repo
-✔ Help anyone run locally
-✔ Look production-grade
-
-Below is a **clean, professional README.md** you can directly use in your app-repo.
-
----
-
 # 🧩 Event-Driven Microservices Platform (App Repository)
 
 This repository contains the **core microservices application code** for an event-driven, cloud-native system built using:
