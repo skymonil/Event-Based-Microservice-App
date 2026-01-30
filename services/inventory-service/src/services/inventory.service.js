@@ -371,11 +371,14 @@ const releaseStock = async (orderId) => {
 const handleReservationFailed = async ({ orderId, reason }) => {
   const extractedContext = propagation.extract(context.active(), {});
   return await context.with(extractedContext, async () => {
-
+  return await tracer.startActiveSpan("inventory.handleReservationFailed", async (span) => {
+   
   const client = await db.connect();
   try {
     const headers = {};
     propagation.inject(context.active(), headers || {});
+     span.setAttribute("order.id", orderId);
+     span.setAttribute("failure.reason", reason);
     logger.warn({ orderId, reason }, "📢 Publishing 'inventory.reservation.failed' event");
 
     await inventoryQueries.createOutboxEntry({
@@ -396,6 +399,7 @@ const handleReservationFailed = async ({ orderId, reason }) => {
     span.end();
   }
 });
+})
 };
 
 module.exports = {
