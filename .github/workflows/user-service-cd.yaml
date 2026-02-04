@@ -27,7 +27,7 @@ jobs:
           NEW_TAG=${{ github.event.workflow_run.head_sha }}
           
           sed -i -E "s|(image:\s*skymonil/user-service:).*|\1${NEW_TAG}|" \
-          gitops/services/user-service/Deployment.yaml
+          gitops/services/user-service/rollout.yaml
 
       - name: Commit & push to GitOps repo
         run: |
@@ -35,6 +35,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add services/user-service/Deployment.yaml
+          git add services/user-service/rollout.yaml
           git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
           git push
