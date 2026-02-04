@@ -6,11 +6,8 @@ on:
     workflows: ["user-service-ci"]
     types:
       - completed
-  push:
-    branches:
-      - main
-    paths:
-      - "services/user-service/**"
+  
+    
 
 jobs:
   deploy:
@@ -29,7 +26,7 @@ jobs:
         run: |
           NEW_TAG=${{ github.event.workflow_run.head_sha }}
           
-          sed -i "s|image: skymonil/user-service:.*|image: skymonil/user-service:${{ github.sha }}|g" \
+          sed -i "s|image: skymonil/user-service:.*|image: skymonil/user-service:${NEW_TAG}|g" \
           gitops/environments/dev/apps/user-service.yaml
 
       - name: Commit & push to GitOps repo
@@ -39,6 +36,5 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add environments/dev/apps/user-service.yaml
-          git commit -m "Deploy user-service ${{ github.sha }} to dev"
-          git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" --allow-empty
+          git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
           git push
