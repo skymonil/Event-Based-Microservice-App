@@ -26,8 +26,8 @@ jobs:
         run: |
           NEW_TAG=${{ github.event.workflow_run.head_sha }}
           
-          sed -i "s|image: skymonil/user-service:.*|image: skymonil/user-service:${NEW_TAG}|g" \
-          gitops/environments/dev/apps/user-service.yaml
+          sed -i -E "s|(image:\s*skymonil/user-service:).*|\1${NEW_TAG}|" \
+          services/user-service/Deployment.yaml
 
       - name: Commit & push to GitOps repo
         run: |
