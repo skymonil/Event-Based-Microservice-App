@@ -1,10 +1,10 @@
+# .github/workflows/user-service-ci.yaml
 name: user-service-ci
 
 on:
   push:
     branches:
       - main
-      - feature/**
     paths:
       - "services/user-service/**"
 
