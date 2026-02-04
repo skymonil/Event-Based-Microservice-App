@@ -5,7 +5,7 @@ const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http")
 const sdk = new NodeSDK({
   serviceName: process.env.OTEL_SERVICE_NAME || "inventory-service",
   traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel-collector.default:4318/v1/traces",
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel-collector-opentelemetry-collector.observability:4318/v1/traces",
   }),
   instrumentations: [getNodeAutoInstrumentations()],
 });
