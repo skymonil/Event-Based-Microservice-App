@@ -27,6 +27,8 @@ jobs:
 
       - name: Update image tag in dev manifest
         run: |
+          NEW_TAG=${{ github.event.workflow_run.head_sha }}
+          
           sed -i "s|image: skymonil/user-service:.*|image: skymonil/user-service:${{ github.sha }}|g" \
           gitops/environments/dev/apps/user-service.yaml
 
@@ -38,4 +40,5 @@ jobs:
 
           git add environments/dev/apps/user-service.yaml
           git commit -m "Deploy user-service ${{ github.sha }} to dev"
+          git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" --allow-empty
           git push
