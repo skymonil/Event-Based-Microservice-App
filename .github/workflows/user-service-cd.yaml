@@ -1,6 +1,10 @@
 name: user-service-cd
 
 on:
+  workflow_run:
+    workflows: ["user-service-ci"]
+    types:
+      - completed
   push:
     branches:
       - main
@@ -10,6 +14,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout GitOps repo
