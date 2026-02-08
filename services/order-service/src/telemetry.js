@@ -10,6 +10,8 @@ const sdk = new NodeSDK({
   instrumentations: [getNodeAutoInstrumentations()],
 });
 
+  
+
 // ✅ Fix: Check if it's synchronous (most common in current SDK versions)
 try {
   sdk.start();
