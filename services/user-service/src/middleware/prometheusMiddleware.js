@@ -1,26 +1,30 @@
-const {httpRequestDuration, httpRequestsTotal} = require('../metrics')
+const { httpRequestDuration, httpRequestsTotal } = require('../metrics');
 
-app.use((req , res , next) =>{
+const prometheusMiddleware = (req, res, next) => {
     const start = process.hrtime();
 
-    res.on("finish", ()=> {
-        process.hrtime(start);
-        const duration = diff[0] + diff[1] / 1e9
-    
+    res.on("finish", () => {
+        // ✅ FIX: Capture the result of hrtime in the 'diff' variable
+        const diff = process.hrtime(start); 
+        const duration = diff[0] + diff[1] / 1e9;
 
-    httpRequestsTotal.labels(
-        req.method,
-        req.route?.path || req.path,
-        res.statusCode
-    ).inc();
+        // Use optional chaining for route path
+        const path = req.route?.path || req.path;
 
-    httpRequestDuration.labels(
-        req.method,
-        req.route?.path || req.path,
-        res.statusCode
-    ).observe(duration);
-    })
+        httpRequestsTotal.labels(
+            req.method,
+            path,
+            res.statusCode
+        ).inc();
+
+        httpRequestDuration.labels(
+            req.method,
+            path,
+            res.statusCode
+        ).observe(duration);
+    });
+
     next();
+};
 
-
-})
+module.exports = prometheusMiddleware;
