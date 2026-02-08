@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 
 const userQueries = require("../db/queries/user.queries");
 const config = require("../config/config");
+const {businessErrorsTotal} = require('../metrics')
 
 /**
  * Create a new user
@@ -12,6 +13,7 @@ const createUser = async ({ name, email, password }) => {
   // Check if user already exists
   const existingUser = await userQueries.getUserByEmail(email);
   if (existingUser) {
+    businessErrorsTotal.labels('user_exists').inc();
     throw new Error("User already exists");
   }
 
@@ -42,7 +44,8 @@ const createUser = async ({ name, email, password }) => {
 const getUserById = async (id) => {
   const user = await userQueries.getUserById(id);
   if (!user) {
-    return null;
+     businessErrorsTotal.labels('user_does_not_exist').inc()
+    throw new Error("User Not found")
   }
 
   return {
@@ -58,11 +61,13 @@ const getUserById = async (id) => {
 const loginUser = async (email, password) => {
   const user = await userQueries.getUserByEmail(email);
   if (!user) {
+     businessErrorsTotal.labels('invalid_login').inc();
     throw new Error("Invalid email or password");
   }
 
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
+    businessErrorsTotal.labels('invalid_login').inc();
     throw new Error("Invalid email or password");
   }
 

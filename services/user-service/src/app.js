@@ -4,8 +4,22 @@ const cors = require("cors");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
 const userRoutes = require("./routes/user.routes");
 const errorHandler = require("./middleware/error.middleware");
+const prometheusMiddleware = require('./middleware/prometheusMiddleware')
+const {client}   = require('./metrics')
 
+app.use(prometheusMiddleware)
 const app = express();
+
+//Prometheus Scrape Endpoint
+app.get('/metrics', async(req, res) => {
+   res.set('Content-Type',
+   client.register.contentType
+   )
+
+   res.end( await client.register.metrics())
+})
+
+
 
 // Security headers
 app.use(helmet());
