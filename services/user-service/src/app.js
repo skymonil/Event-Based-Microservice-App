@@ -7,8 +7,10 @@ const errorHandler = require("./middleware/error.middleware");
 const prometheusMiddleware = require('./middleware/prometheusMiddleware')
 const {client}   = require('./metrics')
 
-app.use(prometheusMiddleware)
 const app = express();
+
+app.use(prometheusMiddleware)
+
 
 //Prometheus Scrape Endpoint
 app.get('/metrics', async(req, res) => {
