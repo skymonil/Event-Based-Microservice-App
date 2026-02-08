@@ -35,7 +35,7 @@ app.use(requestIdMiddleware);
 
 // Health check (important for Kubernetes)
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "UP Version 5.32" });
+  res.status(200).json({ status: "UP Version 5.33" });
 });
 
 // Routes
