@@ -21,17 +21,17 @@ describe('User Service - Login Smoke Test', () => {
         return false;
       }
     }, 30000, 'Service not ready for Login Test');
-  })
+  
 
   // 🛠️ Setup: Create a user strictly for this test
-  beforeAll(async () => {
+    console.log("👤 Creating Login User...");
     const res = await client.post('/api/users', {
       email,
       password,
       name: 'Login User' // 🟢 UPDATED: Field name fixed
     });
     userId = res.data.user.id; // 🟢 UPDATED: Accessing nested user object
-  });
+  },60000);
 
   it('should login and return a JWT token', async () => {
     const res = await client.post('/api/login', {
