@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('../common/httpClient');
 const { expectHttpError } = require('../common/assertions');
-
+const { waitFor } = require('../common/waitFor');
 // Initialize client (Base URL comes from ENV)
 const client = createClient();
 
@@ -9,6 +9,22 @@ describe('User Service - Registration Smoke Test', () => {
   const uniqueEmail = `smoke-reg-${uuidv4()}@example.com`;
   const password = 'StrongPassword123!';
   const userName = 'Smoke Tester';
+
+
+  beforeAll(async () => {
+  console.log("⏳ Waiting for user-service readiness...");
+
+  await waitFor(async () => {
+    try {
+      const res = await client.get('/health');
+      return res.status === 200;
+    } catch {
+      return false;
+    }
+  }, 30000, 'User service not ready');
+
+  console.log("✅ user-service ready");
+});
 
   it('should register a new user successfully (201)', async () => {
     const res = await client.post('/api/users', {
