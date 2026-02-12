@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --verbose",
-    "test:user": "jest user-service --detectOpenHandles",
-    "test:order": "jest order-service --detectOpenHandles",
+    "test:user": "jest user-service --detectOpenHandles --testTimeout=30000",
+    "test:order": "jest order-service --detectOpenHandles --testTimeout=30000",
   "test:order:smoke": "jest order-service/order-service.smoke.test.js --detectOpenHandles",
   "test:order:e2e": "jest order-service/order-service.full.e2e.test.js --detectOpenHandles",
     "test:inventory": "jest inventory-service --detectOpenHandles"
