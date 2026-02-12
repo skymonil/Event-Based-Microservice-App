@@ -1,0 +1,42 @@
+name: synthetic-tests-ci
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tests/**"          # 🟢 Only runs if you touch the tests folder
+      - ".github/workflows/tests-ci.yaml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "tests/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push
+        if: github.ref == 'refs/heads/main'
+        working-directory: tests
+        run: |
+          # 1. Build the image
+          docker build -t skymonil/synthetic-tests:${{ github.sha }} .
+          
+          # 2. Tag it as 'latest' so Argo always finds the newest version
+          docker tag skymonil/synthetic-tests:${{ github.sha }} skymonil/synthetic-tests:latest
+          
+          # 3. Push both tags
+          docker push skymonil/synthetic-tests:${{ github.sha }}
+          docker push skymonil/synthetic-tests:latest

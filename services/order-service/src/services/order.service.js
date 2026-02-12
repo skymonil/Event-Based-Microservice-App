@@ -6,6 +6,10 @@ const db = require("../db"); // Import the DB pool to start transactions
 const {logger} = require('../utils/logger');
 const {trace, SpanStatusCode, context, propagation} = require("@opentelemetry/api");
 const tracer = trace.getTracer("order-service");
+
+// IMPORT METRICS
+const { ordersTotal, orderValue } = require("../metrics");
+
 /**
  * Create a new order
  */
@@ -27,6 +31,8 @@ const createOrder = async ({
 
     if (existing) {
       span.end();
+      // Metric: Duplicate Request Ignored
+      ordersTotal.inc({ status: "DUPLICATE_IGNORED" });
       return {
         ...existing,
         isDuplicate: true
@@ -65,6 +71,10 @@ const createOrder = async ({
     // 3. Persist the Event to the Outbox table
     await orderQueries.createOutboxEntry(outboxEntry, client);
     await client.query('COMMIT');
+
+    // 📊 Metric: Order Created & Revenue Recorded
+      ordersTotal.inc({ status: "CREATED" });
+      orderValue.observe(totalAmount);
 
     return {
      id: orderId,
@@ -161,6 +171,9 @@ const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) 
       finalStatus = "CANCELLED";
       eventType = "order.cancelled"
       await orderQueries.markCancelled(orderId, idempotencyKey, client);
+
+      // 📊 Metric: User Cancelled
+        ordersTotal.inc({ status: "CANCELLED", reason: "USER_REQUEST" });
       logger.info(logContext, `Order state ${order.status} -> CANCELLED (No refund needed)`);
      }
     else if (order.status === "PAID") {
@@ -173,6 +186,8 @@ const cancelOrder = async({orderId, userId, idempotencyKey, traceHeaders = {}}) 
       eventType = "order.cancel.requested";
 
       await orderQueries.markCancelRequested(orderId, idempotencyKey, client);
+      // 📊 Metric: Refund Process Started
+        ordersTotal.inc({ status: "REFUND_REQUESTED", reason: "USER_REQUEST" });
       logger.info(logContext, "Order state PAID -> CANCELLING (Refund Saga triggered)");
 
     }
@@ -229,6 +244,9 @@ const handlePaymentCompleted = async(orderId,paymentId) =>{
     orderId,
     "PAID"
   )
+   // 📊 Metric: Successful Payment
+
+   ordersTotal.inc({ status: "PAID" });
    span.setStatus({ code: SpanStatusCode.OK });
    } catch (err) {
      span.recordException(err);
@@ -251,6 +269,10 @@ const handlePaymentFailed = async(orderId,paymentId,reason) =>{
     orderId,
     "PAYMENT_FAILED"
   )
+
+  // 📊 Metric: Payment Failure -> Auto Cancel
+      ordersTotal.inc({ status: "CANCELLED", reason: "PAYMENT_FAILED" });
+
   span.setStatus({ code: SpanStatusCode.OK });
 }
 catch (err) {
@@ -293,6 +315,7 @@ const handlePaymentRefunded = async({orderId, traceHeaders}) =>{
     }, client);
     
     await client.query("COMMIT");
+     ordersTotal.inc({ status: "REFUND_COMPLETED" });
     logger.info({ orderId }, "Order successfully marked as REFUNDED/CANCELLED");
   } catch (err) {
      await client.query("ROLLBACK");

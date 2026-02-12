@@ -86,6 +86,7 @@ const startConsumer = async () => {
             });
           }
 
+          kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME, status: "success" });
           span.end();
         });
       } catch (err) {
@@ -103,7 +104,8 @@ const startConsumer = async () => {
           throw err;
         }
 
-        kafkaDLQ.inc({ topic, service: SERVICE_NAME });
+        kafkaDLQ.inc({ topic, service: SERVICE_NAME, error_type: err.name || "UnknownError" });
+        kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME, status: "failed" }); // Track failures too
         await sendToDLQ({ topic, message, error: err });
       }
     });

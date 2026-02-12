@@ -1,9 +1,9 @@
 # .github/workflows/user-service-cd.yaml
-name: user-service-cd
+name: order-service-cd
 
 on:
   workflow_run:
-    workflows: ["user-service-ci"]
+    workflows: ["order-service-cd"]
     types:
       - completed
   
@@ -22,15 +22,12 @@ jobs:
           token: ${{ secrets.GITOPS_TOKEN }}
           path: gitops
 
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-
-      - name: Update Image Tag in Dev Overlay
-        # 🟢 Navigate specifically to the DEV overlay folder
-        working-directory: gitops/services/user-service/overlays/dev
+      - name: Update image tag in dev manifest
         run: |
           NEW_TAG=${{ github.event.workflow_run.head_sha }}
-          kustomize edit set image skymonil/user-service=skymonil/user-service:$NEW_TAG
+          
+          sed -i -E "s|(image:\s*skymonil/order-service:).*|\1${NEW_TAG}|" \
+          gitops/services/order-service/rollout.yaml
 
       - name: Commit & push to GitOps repo
         run: |
@@ -38,6 +35,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add services/user-service/rollout.yaml
-          git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
+          git add services/order-service/rollout.yaml
+          git commit -m "Deploy order-service ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
           git push
