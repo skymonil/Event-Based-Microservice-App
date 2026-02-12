@@ -3,7 +3,7 @@ name: order-service-cd
 
 on:
   workflow_run:
-    workflows: ["order-service-cd"]
+    workflows: ["order-service-ci"]
     types:
       - completed
   

@@ -14,7 +14,12 @@ const createUser = async ({ name, email, password }) => {
   const existingUser = await userQueries.getUserByEmail(email);
   if (existingUser) {
     businessErrorsTotal.labels('user_exists').inc();
-    throw new Error("User already exists");
+    throw new AppError({
+      type: "https://api.yourservice.com/errors/user-exists", // or specific code
+      title: "Conflict",
+      status: 409,
+      detail: `User with email ${email} already exists`
+    });
   }
 
   // Hash password
@@ -62,8 +67,15 @@ const loginUser = async (email, password) => {
   const user = await userQueries.getUserByEmail(email);
   if (!user) {
      businessErrorsTotal.labels('invalid_login').inc();
-    throw new Error("Invalid email or password");
+
+    throw new AppError({
+      type: "https://api.yourservice.com/errors/auth-failed",
+      title: "Unauthorized",
+      status: 401,
+      detail: "Invalid email or password"
+    });
   }
+
 
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
