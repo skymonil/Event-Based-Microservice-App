@@ -1,19 +1,34 @@
-const { expect } = require('@jest/globals');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/**
- * Asserts that an Axios promise rejects with a specific status code.
- */
-const expectHttpError = async (promise, statusCode) => {
-  try {
-    await promise;
-  } catch (error) {
-    if (error.response) {
-      expect(error.response.status).toBe(statusCode);
-      return;
+const expectHttpError = async (requestFn, expectedStatus) => {
+  const maxRetries = 5;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await requestFn();
+    } catch (error) {
+      // Infra failure → retry
+      if (
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT'
+      ) {
+        console.log(`⚠️ transient infra error, retry ${i+1}/${maxRetries}`);
+        await sleep(1000);
+        continue;
+      }
+
+      // HTTP error → assert
+      if (error.response) {
+        expect(error.response.status).toBe(expectedStatus);
+        return;
+      }
+
+      throw error;
     }
-    throw error; // Re-throw if it's not an HTTP error
   }
-  throw new Error(`Expected HTTP ${statusCode} but request succeeded`);
+
+  throw new Error('Request never succeeded due to infra instability');
 };
 
 module.exports = { expectHttpError };

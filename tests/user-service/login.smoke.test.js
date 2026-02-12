@@ -9,6 +9,20 @@ describe('User Service - Login Smoke Test', () => {
   const password = 'LoginPass123!';
   let userId;
 
+  beforeAll(async () => {
+    console.log("⏳ Login Test: Waiting for service...");
+    
+    // 🟢 ADD THIS BLOCK
+    await waitFor(async () => {
+      try {
+        const res = await client.get('/health'); // or your health endpoint
+        return res.status === 200;
+      } catch  {
+        return false;
+      }
+    }, 30000, 'Service not ready for Login Test');
+  })
+
   // 🛠️ Setup: Create a user strictly for this test
   beforeAll(async () => {
     const res = await client.post('/api/users', {
