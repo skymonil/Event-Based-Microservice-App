@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const userQueries = require("../db/queries/user.queries");
 const config = require("../config/config");
 const {businessErrorsTotal} = require('../metrics')
-
+const {AppError} = require('../utils/app-error')
 /**
  * Create a new user
  */
@@ -50,7 +50,12 @@ const getUserById = async (id) => {
   const user = await userQueries.getUserById(id);
   if (!user) {
      businessErrorsTotal.labels('user_does_not_exist').inc()
-    throw new Error("User Not found")
+   throw new AppError({
+      type: "https://api.yourservice.com/errors/user-exists", // or specific code
+      title: "Conflict",
+      status: 404,
+      detail: `User Not found`
+    });
   }
 
   return {
@@ -69,10 +74,10 @@ const loginUser = async (email, password) => {
      businessErrorsTotal.labels('invalid_login').inc();
 
     throw new AppError({
-      type: "https://api.yourservice.com/errors/auth-failed",
+      type: "https://api.yourservice.com/errors/user-not-found",
       title: "Unauthorized",
       status: 401,
-      detail: "Invalid email or password"
+      detail: "User does not exist"
     });
   }
 
@@ -80,7 +85,12 @@ const loginUser = async (email, password) => {
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
     businessErrorsTotal.labels('invalid_login').inc();
-    throw new Error("Invalid email or password");
+    throw new AppError({
+      type: "https://api.yourservice.com/errors/auth-failed",
+      title: "Unauthorized",
+      status: 401,
+      detail: "Invalid email or password"
+    });
   }
 
   // Generate JWT
