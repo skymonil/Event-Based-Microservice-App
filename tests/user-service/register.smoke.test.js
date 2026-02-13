@@ -6,7 +6,7 @@ const { waitFor } = require('../common/waitFor');
 const client = createClient();
 
 describe('User Service - Registration Smoke Test', () => {
-  const uniqueEmail = `smoke-reg-${uuidv4()}@example.com`;
+ const uniqueEmail = `smoke-reg-${Date.now()}-${uuidv4()}@example.com`;
   const password = 'StrongPassword123!';
   const userName = 'Smoke Tester';
 
