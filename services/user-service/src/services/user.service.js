@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const userQueries = require("../db/queries/user.queries");
 const config = require("../config/config");
 const {businessErrorsTotal} = require('../metrics')
-const {AppError} = require('../utils/app-error')
+const AppError = require('../utils/app-error')
 
 
 const trackError = (type) => {
