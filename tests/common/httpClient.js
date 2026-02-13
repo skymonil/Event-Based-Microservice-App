@@ -6,6 +6,7 @@ const createClient = (baseUrl = config.baseUrl) => {
   const client = axios.create({
     baseURL: baseUrl,
     timeout: config.timeouts.http,
+    validateStatus: () => true,
     headers: {
       'Content-Type': 'application/json',
       'x-synthetic-test': 'true' // Tag traffic so we can filter it in Prometheus/Logs

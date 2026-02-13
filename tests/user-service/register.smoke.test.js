@@ -1,6 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('../common/httpClient');
-const { expectHttpError } = require('../common/assertions');
 const { waitFor } = require('../common/waitFor');
 
 const client = createClient();
@@ -46,14 +45,15 @@ describe('User Service - Registration Smoke Test', () => {
       password: password,
       name: userName
     });
-    await expectHttpError(req, 409);
+    expect(req.status).toBe(409)
   });
 
   it('should fail with invalid payload (400)', async () => {
-    const req = client.post('/api/users', {
+    const res = client.post('/api/users', {
       email: 'bad-email-format',
       name: 'Invalid User'
     });
-    await expectHttpError(req, 400);
+    expect(res.status).toBe(400);
+    
   });
 });

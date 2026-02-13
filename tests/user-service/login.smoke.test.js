@@ -1,6 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('../common/httpClient');
-const { expectHttpError } = require('../common/assertions');
 const { waitFor } = require('../common/waitFor');
 
 const client = createClient();
@@ -58,6 +57,6 @@ describe('User Service - Login Smoke Test', () => {
       email,
       password: 'WrongPassword'
     });
-    await expectHttpError(req, 401);
+  expect(req.status).toBe(401);
   });
 });
