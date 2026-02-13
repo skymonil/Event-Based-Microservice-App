@@ -6,6 +6,19 @@ const userQueries = require("../db/queries/user.queries");
 const config = require("../config/config");
 const {businessErrorsTotal} = require('../metrics')
 const {AppError} = require('../utils/app-error')
+
+
+const trackError = (type) => {
+  try {
+    if (businessErrorsTotal) {
+      // 🟢 SAFE CALL: Use object syntax { type: ... }
+      businessErrorsTotal.labels({ type }).inc();
+    }
+  } catch (e) {
+    console.warn("⚠️ Metrics Error (Ignored):", e.message);
+  }
+};
+
 /**
  * Create a new user
  */
@@ -13,7 +26,7 @@ const createUser = async ({ name, email, password }) => {
   // Check if user already exists
   const existingUser = await userQueries.getUserByEmail(email);
   if (existingUser) {
-    businessErrorsTotal.labels('user_exists').inc();
+    trackError('user_exists');
     throw new AppError({
       type: "https://api.yourservice.com/errors/user-exists", // or specific code
       title: "Conflict",
@@ -49,7 +62,7 @@ const createUser = async ({ name, email, password }) => {
 const getUserById = async (id) => {
   const user = await userQueries.getUserById(id);
   if (!user) {
-     businessErrorsTotal.labels('user_does_not_exist').inc()
+     trackError('user_does_not_exists');
    throw new AppError({
       type: "https://api.yourservice.com/errors/user-exists", // or specific code
       title: "Conflict",
@@ -71,7 +84,7 @@ const getUserById = async (id) => {
 const loginUser = async (email, password) => {
   const user = await userQueries.getUserByEmail(email);
   if (!user) {
-     businessErrorsTotal.labels('invalid_login').inc();
+    trackError('invalid_login');;
 
     throw new AppError({
       type: "https://api.yourservice.com/errors/user-not-found",
@@ -84,7 +97,7 @@ const loginUser = async (email, password) => {
 
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
-    businessErrorsTotal.labels('invalid_login').inc();
+    trackError('invalid_login');;
     throw new AppError({
       type: "https://api.yourservice.com/errors/auth-failed",
       title: "Unauthorized",

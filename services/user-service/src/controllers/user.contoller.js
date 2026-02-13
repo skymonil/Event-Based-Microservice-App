@@ -1,11 +1,10 @@
 // src/controllers/user.controller.js
 const userService = require("../services/user.service");
-const { getRequestLogger } = require("../utils/logger");
+const {logger} = require('../utils/logger')
 /**
  * Create a new user
  */
 const createUser = async (req, res, next) => {
-  const logger = getRequestLogger(req.requestId);
   try {
     logger.info("Create user request received");
     const { name, email, password } = req.body;
