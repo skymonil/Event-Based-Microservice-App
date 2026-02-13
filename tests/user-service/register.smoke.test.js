@@ -40,16 +40,16 @@ describe('User Service - Registration Smoke Test', () => {
   });
 
   it('should fail when registering with an existing email (409)', async () => {
-    const req = client.post('/api/users', {
+    const res = await  client.post('/api/users', {
       email: uniqueEmail,
       password: password,
       name: userName
     });
-    expect(req.status).toBe(409)
+    expect(res.status).toBe(409)
   });
 
   it('should fail with invalid payload (400)', async () => {
-    const res = client.post('/api/users', {
+    const res = await  client.post('/api/users', {
       email: 'bad-email-format',
       name: 'Invalid User'
     });

@@ -53,10 +53,10 @@ describe('User Service - Login Smoke Test', () => {
   });
 
   it('should reject login with wrong password (401)', async () => {
-    const req = client.post('/api/login', {
+    const res = await  client.post('/api/login', {
       email,
       password: 'WrongPassword'
     });
-  expect(req.status).toBe(401);
+  expect(res.status).toBe(401);
   });
 });
