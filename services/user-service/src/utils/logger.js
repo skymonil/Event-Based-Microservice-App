@@ -1,27 +1,21 @@
-const pino = require("pino");
+const pino = require('pino');
 
-const baseLogger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? {
-          target: "pino-pretty",
+// Check if we are in production
+const isProduction = process.env.NODE_ENV === 'production';
+
+const logger = pino(
+  isProduction
+    ? {} // 🟢 PRODUCTION: Use fast, raw structured JSON
+    : {
+        // 🟡 LOCAL DEV: Use pino-pretty for human-readable terminal output
+        transport: {
+          target: 'pino-pretty',
           options: {
             colorize: true,
-            translateTime: "SYS:standard"
-          }
-        }
-      : undefined
-});
+            translateTime: 'SYS:standard',
+          },
+        },
+      }
+);
 
-/**
- * Create a request-scoped logger
- */
-const getRequestLogger = (requestId) => {
-  return baseLogger.child({ requestId });
-};
-
-module.exports = {
-  logger: baseLogger,
-  getRequestLogger
-};
+module.exports = { logger };
