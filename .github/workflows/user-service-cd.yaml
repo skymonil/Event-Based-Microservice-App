@@ -32,12 +32,13 @@ jobs:
         with:
           name: ${{env.SERVICE_NAME}}-digest
           run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITOPS_TOKEN }}
 
       - name: Update Image Digest in Dev Overlay
         # 🟢 Navigate specifically to the DEV overlay folder
         working-directory: gitops/services/${{env.SERVICE_NAME}}/overlays/dev
         run: |
-          DIGEST=$(cat ../../../../image-digest.txt)
+          DIGEST=$(cat $GITHUB_WORKSPACE/image-digest.txt)
           kustomize edit set image skymonil/${{ env.SERVICE_NAME }}=$DIGEST
           
 

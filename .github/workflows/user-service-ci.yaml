@@ -56,7 +56,7 @@ jobs:
 
       - name: Write digest to file
         if: github.ref == 'refs/heads/main'
-        run: echo "${{ steps.build.outputs.digest }}" > image-digest.txt1
+        run: echo "skymonil/${{env.SERVICE_NAME}}@${{ steps.build.outputs.digest }}" > image-digest.txt
 
       - name: Upload digest artifact
         if: github.ref == 'refs/heads/main'
