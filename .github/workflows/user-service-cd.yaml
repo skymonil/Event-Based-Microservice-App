@@ -1,5 +1,7 @@
 # .github/workflows/user-service-cd.yaml
 name: user-service-cd
+env:
+  SERVICE_NAME: user-service
 
 on:
   workflow_run:
@@ -25,19 +27,27 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
 
-      - name: Update Image Tag in Dev Overlay
+      - name: Download image digest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{env.SERVICE_NAME}}-digest
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Update Image Digest in Dev Overlay
         # 🟢 Navigate specifically to the DEV overlay folder
-        working-directory: gitops/services/user-service/overlays/dev
+        working-directory: gitops/services/${{env.SERVICE_NAME}}/overlays/dev
         run: |
-          NEW_TAG=${{ github.event.workflow_run.head_sha }}
-          kustomize edit set image skymonil/user-service=skymonil/user-service:$NEW_TAG
+          DIGEST=$(cat ../../../../image-digest.txt)
+          kustomize edit set image skymonil/${{ env.SERVICE_NAME }}=$DIGEST
+          
 
       - name: Commit & push to GitOps repo
         run: |
+          DIGEST=$(cat image-digest.txt)
           cd gitops
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add services/user-service/overlays/dev/kustomization.yaml
-          git commit -m "Deploy user-service ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
+          git add services/${{env.SERVICE_NAME}}/overlays/dev/kustomization.yaml
+          git commit -m "Deploy ${{ env.SERVICE_NAME }} ${{ github.event.workflow_run.head_sha }} to dev" || echo "No changes to commit" --allow-empty
           git push

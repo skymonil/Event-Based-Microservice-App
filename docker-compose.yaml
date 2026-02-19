@@ -169,7 +169,7 @@ services:
       target: builder
     container_name: payment-service
     volumes:
-      - ./services/payment-service:/app/servicse/payment-service
+      - ./services/payment-service:/app/services/payment-service
       - /app/services/payment-service/node_modules
     env_file:
       - ./services/payment-service/.env
@@ -216,6 +216,7 @@ services:
         condition: service_healthy
     ports:
       - "3003:3003"
+    command: ["pnpm", "run", "dev"]
 
   # =======================
   # INITIALIZATION
