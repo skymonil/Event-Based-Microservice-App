@@ -112,11 +112,14 @@ services:
   # MICROSERVICES
   # =======================
   user-service:
-    build: ./services/user-service
+    build:
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+      target: builder
     container_name: user-service
     volumes:
-      - ./services/user-service:/app
-      - /app/node_modules
+      - ./services/user-service:/app/services/user-service
+      - /app/services/user-service/node_modules
     env_file:
       - ./services/user-service/.env
     environment:
@@ -131,13 +134,17 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
+    command: ["pnpm", "run", "dev"]
 
   order-service:
-    build: ./services/order-service
+    build:
+      context: .
+      dockerfile: ./services/order-service/Dockerfile
+      target: builder
     container_name: order-service
     volumes:
-      - ./services/order-service:/app
-      - /app/node_modules
+      - ./services/order-service:/app/services/order-service
+      - /app/services/order-service/node_modules
     env_file:
       - ./services/order-service/.env
     environment:
@@ -152,13 +159,18 @@ services:
         condition: service_started
     ports:
       - "3001:3001"
+    command: ["pnpm", "run", "dev"]
+    
 
   payment-service:
-    build: ./services/payment-service
+    build:
+      context: .
+      dockerfile: ./services/payment-service/Dockerfile
+      target: builder
     container_name: payment-service
     volumes:
-      - ./services/payment-service:/app
-      - /app/node_modules
+      - ./services/payment-service:/app/servicse/payment-service
+      - /app/services/payment-service/node_modules
     env_file:
       - ./services/payment-service/.env
     environment:
@@ -173,13 +185,17 @@ services:
         condition: service_started
     ports:
       - "3002:3002"
+    command: ["pnpm", "run", "dev"]
 
   inventory-service: 
-    build: ./services/inventory-service
+    build:
+      context: .
+      dockerfile: ./services/inventory-service/Dockerfile
+      target: builder
     container_name: inventory-service
     volumes:
-      - ./services/inventory-service:/app
-      - /app/node_modules
+      - ./services/inventory-service:/app/services/inventory-service
+      - /app/services/inventory-service/node_modules
     env_file:
       - ./services/inventory-service/.env
     environment:

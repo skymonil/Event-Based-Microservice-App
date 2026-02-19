@@ -1,0 +1,8 @@
+packages:
+  - services/*
+
+onlyBuiltDependencies:
+  - bcrypt
+  - esbuild
+  - protobufjs
+  - unrs-resolver

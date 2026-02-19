@@ -33,10 +33,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+  "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -L src/index.js",
-    "start": "node src/index.js",
-    "migrate": "dbmate -d \"src/db/migrations\" up ",
+    "start": "node dist/server.js",
+    "build": "esbuild src/index.js --bundle --platform=node --target=node22 --packages=external --minify --outfile=dist/server.js",
+    "migrate": "dbmate -d \"src/db/migrations\" up",
     "migrate:down": "dbmate down"
   },
   "keywords": [],

@@ -1,4 +1,31 @@
-node_modules
-npm-debug.log
-.env
+# Ignore Git history (Massive space saver)
 .git
+.gitignore
+
+# Ignore ALL node_modules across the entire monorepo
+node_modules
+**/node_modules
+
+# Ignore all compiled output directories
+dist
+**/dist
+
+# Ignore environment variables and secrets (Security!)
+.env
+**/.env
+**/.env.*
+
+# Ignore Docker and local infrastructure files
+Dockerfile
+**/Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Ignore debug logs
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Ignore IDE files
+.vscode
+.idea
