@@ -11,7 +11,7 @@ client.collectDefaultMetrics({ register });
 const httpRequestDuration = new client.Histogram({
   name: "http_request_duration_seconds",
   help: "HTTP request latency",
-  labelNames: ["method", "route", "status"],
+  labelNames: ["method", "route", "status", "service"],
   registers: [register]
 });
 

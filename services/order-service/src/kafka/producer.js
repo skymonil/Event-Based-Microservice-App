@@ -1,3 +1,4 @@
+// kafka/producer.js
 const kafka = require('./kafka')
 const {logger} = require('../utils/logger')
 const {trace, context, propagation } = require("@opentelemetry/api");

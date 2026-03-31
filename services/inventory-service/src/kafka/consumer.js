@@ -48,7 +48,7 @@ const startConsumer = async () => {
       const payload = JSON.parse(message.value.toString());
       const extractedContext = extractKafkaContext(message)
 
-        let orderId = "unknown";
+        orderId = payload.orderId || "unknown";
       
     
 
@@ -84,10 +84,9 @@ const startConsumer = async () => {
                 logger.warn({ topic }, "Received message for unknown topic");
             }
 
-            span.end();
+           
           } catch (err) {
             span.recordException(err);
-            span.end();
           // ====================================================
             // 🛡️ ERROR CLASSIFICATION & RETRY STRATEGY
             // ====================================================
@@ -122,6 +121,10 @@ const startConsumer = async () => {
             // THROWING tells Kafka "I failed".
             // Kafka will pause partition consumption based on your retry policy (backoff).
             throw err;
+          }
+          finally {
+            // ✅ FIX 1: Ensure span ends whether it succeeded or failed
+            span.end();
           }
         });
       });

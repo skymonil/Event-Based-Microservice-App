@@ -32,6 +32,8 @@ app.use(prometheusMiddleware)
  * Liveness Probe: Is thdfdfe process running?
  * If this returns a non-200, K8s kills the Pod.
  */
+
+app.use(requestIdMiddleware)
 app.get('/health/live', (req, res) => {
   res.status(200).send('OK');
 });

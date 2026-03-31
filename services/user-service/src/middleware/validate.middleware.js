@@ -1,4 +1,4 @@
-
+// middleware/validate.middleware.js
 const AppError = require("../utils/app-error");
 const validate = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);

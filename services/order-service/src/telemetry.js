@@ -2,6 +2,8 @@ const { NodeSDK } = require("@opentelemetry/sdk-node");
 const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
 const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
 
+const { KafkaJsInstrumentation } = require("@opentelemetry/instrumentation-kafkajs");
+
 // --- 1. NEW IMPORTS FOR METRICS ---
 const { OTLPMetricExporter } = require("@opentelemetry/exporter-metrics-otlp-http");
 const { PeriodicExportingMetricReader } = require("@opentelemetry/sdk-metrics");
@@ -23,7 +25,9 @@ const sdk = new NodeSDK({
     exportIntervalMillis: 60000, // Optional: Send metrics every 60 seconds
   }),
 
-  instrumentations: [getNodeAutoInstrumentations()],
+  instrumentations: [getNodeAutoInstrumentations(),
+    new KafkaJsInstrumentation()
+  ],
 });
 
 try {

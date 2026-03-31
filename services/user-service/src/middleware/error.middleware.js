@@ -1,3 +1,4 @@
+// middleware/error.middleware.js
 const { logger } = require("../utils/logger");
 
 const errorHandler = (err, req, res, next) => {
@@ -16,7 +17,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Fallback – unknown / programming errors
   return res.status(500).json({
-    type: "https://order-service/problems/internal-server-error",
+    type: "https://user-service/problems/internal-server-error",
     title: "Internal Server Error",
     status: 500,
     detail: "An unexpected error occurred",

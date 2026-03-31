@@ -27,7 +27,7 @@ const getPaymentsByOrder = async (req, res, next) => {
 
 // Get all payments for logged-in user
 const getPaymentsForUser = async(req , res , next)=>{
-  const logger = getRequestLogger(req.requestId);
+
 
   try {
     const userId = req.user.userId;

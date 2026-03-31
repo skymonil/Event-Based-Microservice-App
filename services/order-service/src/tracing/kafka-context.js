@@ -1,3 +1,4 @@
+// tracing/kafa-context.js
 const {context, propagation, ROOT_CONTEXT} = require('@opentelemetry/api');
 
 function normalizeKafkaHeaders(headers) {

@@ -1,11 +1,11 @@
-const { getRequestLogger } = require("../utils/logger");
+// controllers/order.controller.js
 const orderService = require("../services/order.service");
 const {logger} = require('../utils/logger')
 /**
  * Create a new order
  */
 const createOrder = async (req, res, next) => {
-  const logger = getRequestLogger(req.requestId);
+
   const idempotencyKey = req.headers["idempotency-key"];
 
   try {
@@ -45,7 +45,7 @@ const createOrder = async (req, res, next) => {
  * Get order by ID
  */
 const getOrderById = async (req, res, next) => {
-  const logger = getRequestLogger(req.requestId);
+
 
   try {
     const { id } = req.params;
@@ -69,7 +69,7 @@ const getOrderById = async (req, res, next) => {
  * Get orders for logged-in user
  */
 const getOrdersForUser = async (req, res, next) => {
-  const logger = getRequestLogger(req.requestId);
+
 
   try {
     const userId = req.user.userId;

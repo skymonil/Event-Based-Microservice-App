@@ -1,3 +1,4 @@
+// kafka/consumer.js
 const {
   kafkaMessagesConsumed,
   kafkaDLQ,
@@ -46,7 +47,7 @@ const startConsumer = async () => {
 
   await consumer.run({
   eachMessage: async ({ topic, message }) => {
-    kafkaMessagesConsumed.inc({ topic, service: SERVICE_NAME });
+    
 
     const event = JSON.parse(message.value.toString());
 

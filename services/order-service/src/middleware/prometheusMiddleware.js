@@ -1,5 +1,6 @@
+// middleware/PrometheusMiddleware.js
 const { httpRequestDuration, httpRequestsTotal } = require('../metrics');
-
+const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "order-service";
 const prometheusMiddleware = (req, res, next) => {
     const start = process.hrtime();
 
@@ -14,13 +15,15 @@ const prometheusMiddleware = (req, res, next) => {
         httpRequestsTotal.labels(
             req.method,
             path,
-            res.statusCode
+            res.statusCode,
+            SERVICE_NAME
         ).inc();
 
         httpRequestDuration.labels(
             req.method,
             path,
-            res.statusCode
+            res.statusCode,
+            SERVICE_NAME
         ).observe(duration);
     });
 

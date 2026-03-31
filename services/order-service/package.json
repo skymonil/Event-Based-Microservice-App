@@ -4,6 +4,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.67.3",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+    "@opentelemetry/instrumentation-pg": "^0.66.0",
     "@opentelemetry/sdk-metrics": "^2.5.0",
     "@opentelemetry/sdk-node": "^0.208.0",
     "cors": "^2.8.5",
@@ -33,7 +34,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -L src/index.js",
     "start": "node dist/server.js",
     "build": "esbuild src/index.js --bundle --platform=node --target=node22 --packages=external --minify --outfile=dist/server.js",

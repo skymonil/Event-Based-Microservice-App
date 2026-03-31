@@ -1,10 +1,11 @@
+// services/user.service.js
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const userQueries = require("../db/queries/user.queries");
 const config = require("../config/config");
-const {businessErrorsTotal} = require('../metrics')
+const {businessErrorsTotal, usersCreatedTotal, loginAttempts} = require('../metrics')
 const AppError = require('../utils/app-error')
 
 
@@ -27,12 +28,17 @@ const createUser = async ({ name, email, password }) => {
   const existingUser = await userQueries.getUserByEmail(email);
   if (existingUser) {
     trackError('user_exists');
-    throw new AppError({
-      type: "https://api.yourservice.com/errors/user-exists", // or specific code
-      title: "Conflict",
-      status: 409,
-      detail: `User with email ${email} already exists`
-    });
+   throw new AppError({
+
+ type: "/problems/user-already-exists",
+
+ title: "Conflict",
+
+ status: 409,
+
+ detail: `User with email ${email} already exists`
+
+});
   }
 
   // Hash password
@@ -47,6 +53,8 @@ const createUser = async ({ name, email, password }) => {
 
   // Save user to DB
   await userQueries.createUser(user);
+  
+  usersCreatedTotal.inc(); 
 
   // Never return password hash
   return {
@@ -62,13 +70,18 @@ const createUser = async ({ name, email, password }) => {
 const getUserById = async (id) => {
   const user = await userQueries.getUserById(id);
   if (!user) {
-     trackError('user_does_not_exists');
-   throw new AppError({
-      type: "https://api.yourservice.com/errors/user-exists", // or specific code
-      title: "Conflict",
-      status: 404,
-      detail: `User Not found`
-    });
+     trackError('user_does_not_exist');
+  throw new AppError({
+
+ type: "/problems/user-not-found",
+
+ title: "Not Found",
+
+ status: 404,
+
+ detail: "User not found"
+
+});
   }
 
   return {
@@ -84,10 +97,14 @@ const getUserById = async (id) => {
 const loginUser = async (email, password) => {
   const user = await userQueries.getUserByEmail(email);
   if (!user) {
-    trackError('invalid_login');;
+    trackError('invalid_login');
+
+    loginAttempts.labels({
+    status: "failed"
+    }).inc();
 
     throw new AppError({
-      type: "https://api.yourservice.com/errors/user-not-found",
+      type: "/problems/invalid-credentials",
       title: "Unauthorized",
       status: 401,
       detail: "User does not exist"
@@ -97,7 +114,13 @@ const loginUser = async (email, password) => {
 
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
-    trackError('invalid_login');;
+    trackError('invalid_login');
+
+    loginAttempts.labels({
+ status: "failed",
+ reason: "invalid_password"
+}).inc();
+
     throw new AppError({
       type: "https://api.yourservice.com/errors/auth-failed",
       title: "Unauthorized",
@@ -112,6 +135,11 @@ const loginUser = async (email, password) => {
     config.auth.jwtSecret,
     { expiresIn: config.auth.jwtExpiresIn }
   );
+
+  
+loginAttempts.labels({
+  status: "success"
+}).inc()
 
   return token;
 };

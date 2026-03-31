@@ -1,3 +1,4 @@
+// services/order.service.js
 const { v4: uuidv4 } = require("uuid");
 const orderQueries = require("../db/queries/order.queries");
 const { prepareOrderCreatedEvent } = require("../kafka/producer");

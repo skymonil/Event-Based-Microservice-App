@@ -14,13 +14,21 @@ const createUser = async (req, res, next) => {
       email,
       password
     });
-     logger.info({ userId: user.id }, "User created");
+
+     
     res.status(201).json({
       message: "User created successfully",
       user
     });
+
+    logger.info({ userId: user.id }, "User created");
+
+
   } catch (error) {
-    logger.error(error);
+    logger.error(
+  { err: error },
+  "User creation failed"
+);
     next(error);
   }
 };
@@ -30,6 +38,7 @@ const createUser = async (req, res, next) => {
  */
 const getUserById = async (req, res, next) => {
   try {
+    logger.info(" request received to fetch User by ID");
     const { id } = req.params;
 
     const user = await userService.getUserById(id);
@@ -50,13 +59,20 @@ const getUserById = async (req, res, next) => {
  */
 const loginUser = async (req, res, next) => {
   try {
+    logger.info("Login request received");
     const { email, password } = req.body;
 
     const token = await userService.loginUser(email, password);
 
     res.status(200).json({ token });
+    logger.info({ userId: user.id }, "Login  Successful");
+    
+
   } catch (error) {
-    logger.error(error);
+    logger.error(
+  { err: error },
+  "User creation failed"
+);
     next(error);
   }
 };
