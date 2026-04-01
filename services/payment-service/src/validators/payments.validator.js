@@ -5,13 +5,10 @@ const Joi = require("joi");
  * GET /payments/order/:orderId
  */
 const getPaymentsByOrderSchema = Joi.object({
-  orderId: Joi.string()
-    .uuid()
-    .required()
-    .messages({
-      "string.guid": "orderId must be a valid UUID",
-      "any.required": "orderId is required"
-    })
+	orderId: Joi.string().uuid().required().messages({
+		"string.guid": "orderId must be a valid UUID",
+		"any.required": "orderId is required",
+	}),
 });
 
 /**
@@ -20,16 +17,14 @@ const getPaymentsByOrderSchema = Joi.object({
  * Useful for defensive programming
  */
 const paymentEventSchema = Joi.object({
-  orderId: Joi.string().uuid().required(),
-  userId: Joi.string().uuid().required(),
-  paymentId: Joi.string().uuid().optional(),
-  amount: Joi.number().positive().required(),
-  status: Joi.string()
-    .valid("SUCCESS", "FAILED", "COMPLETED")
-    .required()
+	orderId: Joi.string().uuid().required(),
+	userId: Joi.string().uuid().required(),
+	paymentId: Joi.string().uuid().optional(),
+	amount: Joi.number().positive().required(),
+	status: Joi.string().valid("SUCCESS", "FAILED", "COMPLETED").required(),
 });
 
 module.exports = {
-  getPaymentsByOrderSchema,
-  paymentEventSchema
+	getPaymentsByOrderSchema,
+	paymentEventSchema,
 };

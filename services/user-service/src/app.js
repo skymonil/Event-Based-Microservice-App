@@ -4,24 +4,19 @@ const cors = require("cors");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
 const userRoutes = require("./routes/user.routes");
 const errorHandler = require("./middleware/error.middleware");
-const prometheusMiddleware = require('./middleware/prometheusMiddleware')
-const {client}   = require('./metrics')
+const prometheusMiddleware = require("./middleware/prometheusMiddleware");
+const { client } = require("./metrics");
 
 const app = express();
 
-app.use(prometheusMiddleware)
-
+app.use(prometheusMiddleware);
 
 //Prometheus Scrape Endpoint
-app.get('/metrics', async(req, res) => {
-   res.set('Content-Type',
-   client.register.contentType
-   )
+app.get("/metrics", async (_req, res) => {
+	res.set("Content-Type", client.register.contentType);
 
-   res.end( await client.register.metrics())
-})
-
-
+	res.end(await client.register.metrics());
+});
 
 // Security headers
 app.use(helmet());
@@ -36,8 +31,8 @@ app.use(express.json());
 app.use(requestIdMiddleware);
 
 // Health check (important for Kubernetes)
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "UP Version 5.53" });
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "UP Version 5.53" });
 });
 
 // Routes

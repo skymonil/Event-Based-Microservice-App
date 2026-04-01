@@ -52,13 +52,9 @@
 				"url": {
 					"raw": "http://localhost:3003/products",
 					"protocol": "http",
-					"host": [
-						"localhost"
-					],
+					"host": ["localhost"],
 					"port": "3003",
-					"path": [
-						"products"
-					]
+					"path": ["products"]
 				},
 				"description": "Creates a product in Postgres. The service should emit 'product.created'."
 			},
@@ -94,15 +90,9 @@
 				"url": {
 					"raw": "http://localhost:3003/products/{{productId}}/adjust",
 					"protocol": "http",
-					"host": [
-						"localhost"
-					],
+					"host": ["localhost"],
 					"port": "3003",
-					"path": [
-						"products",
-						"{{productId}}",
-						"adjust"
-					]
+					"path": ["products", "{{productId}}", "adjust"]
 				},
 				"description": "Sets stock in Postgres. The service should emit 'stock.adjusted'."
 			},
@@ -116,13 +106,8 @@
 				"url": {
 					"raw": "https://postman-echo.com/delay/2",
 					"protocol": "https",
-					"host": [
-						"postman-echo.com"
-					],
-					"path": [
-						"delay",
-						"2"
-					]
+					"host": ["postman-echo.com"],
+					"path": ["delay", "2"]
 				},
 				"description": "Pauses for 2 seconds to give Kafka time to sync Postgres -> Redis."
 			},
@@ -155,13 +140,9 @@
 				"url": {
 					"raw": "http://localhost:3003/availability?productId={{productId}}&quantity=1",
 					"protocol": "http",
-					"host": [
-						"localhost"
-					],
+					"host": ["localhost"],
 					"port": "3003",
-					"path": [
-						"availability"
-					],
+					"path": ["availability"],
 					"query": [
 						{
 							"key": "productId",
@@ -207,13 +188,9 @@
 				"url": {
 					"raw": "http://localhost:3001/orders",
 					"protocol": "http",
-					"host": [
-						"localhost"
-					],
+					"host": ["localhost"],
 					"port": "3001",
-					"path": [
-						"orders"
-					]
+					"path": ["orders"]
 				},
 				"description": "Creates an order. Inventory Service listens, reserves stock, and emits 'inventory.reserved'."
 			},
@@ -227,13 +204,8 @@
 				"url": {
 					"raw": "https://postman-echo.com/delay/3",
 					"protocol": "https",
-					"host": [
-						"postman-echo.com"
-					],
-					"path": [
-						"delay",
-						"3"
-					]
+					"host": ["postman-echo.com"],
+					"path": ["delay", "3"]
 				},
 				"description": "Waits 3s for Saga to complete and Redis to update."
 			},
@@ -267,13 +239,9 @@
 				"url": {
 					"raw": "http://localhost:3003/availability?productId={{productId}}&quantity=1",
 					"protocol": "http",
-					"host": [
-						"localhost"
-					],
+					"host": ["localhost"],
 					"port": "3003",
-					"path": [
-						"availability"
-					],
+					"path": ["availability"],
 					"query": [
 						{
 							"key": "productId",

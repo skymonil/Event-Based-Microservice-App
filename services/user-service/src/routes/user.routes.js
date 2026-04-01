@@ -3,11 +3,15 @@ const express = require("express");
 const router = express.Router();
 const validate = require("../middleware/validate.middleware.js");
 const {
-  createUser,
-  getUserById,
-  loginUser
+	createUser,
+	getUserById,
+	loginUser,
 } = require("../controllers/user.contoller.js");
-const { createUserSchema, loginSchema, userIdParamSchema } = require("../validators/user.validator");
+const {
+	createUserSchema,
+	loginSchema,
+	userIdParamSchema,
+} = require("../validators/user.validator");
 // Create a new user
 router.post("/users", validate(createUserSchema), createUser);
 

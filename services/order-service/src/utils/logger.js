@@ -2,84 +2,52 @@ const pino = require("pino");
 const { context, trace } = require("@opentelemetry/api");
 const { getRequestId } = require("./request-context");
 
-const isDev =
- process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV !== "production";
 
 function getTraceContext() {
+	const span = trace.getSpan(context.active());
 
- const span =
-   trace.getSpan(context.active());
+	if (!span) return {};
 
- if (!span) return {};
+	const spanContext = span.spanContext();
 
- const spanContext =
-   span.spanContext();
+	return {
+		trace_id: spanContext.traceId,
 
- return {
-
-   trace_id:
-     spanContext.traceId,
-
-   span_id:
-     spanContext.spanId
-
- };
-
+		span_id: spanContext.spanId,
+	};
 }
 
 const logger = pino({
+	level: process.env.LOG_LEVEL || "info",
 
- level:
-   process.env.LOG_LEVEL || "info",
+	base: {
+		service: process.env.OTEL_SERVICE_NAME || "order-service",
+	},
 
- base: {
+	mixin() {
+		const requestId = getRequestId();
 
-   service:
-     process.env.OTEL_SERVICE_NAME
-     || "order-service"
+		return {
+			...(requestId ? { request_id: requestId } : {}),
 
- },
+			...getTraceContext(),
+		};
+	},
 
- mixin() {
+	transport: isDev
+		? {
+				target: "pino-pretty",
 
-   const requestId =
-     getRequestId();
+				options: {
+					colorize: true,
 
-   return {
+					translateTime: "SYS:standard",
 
-     ...(requestId
-       ? { request_id: requestId }
-       : {}),
-
-     ...getTraceContext()
-
-   };
-
- },
-
- transport: isDev
-
-   ? {
-
-       target:
-         "pino-pretty",
-
-       options: {
-
-         colorize: true,
-
-         translateTime:
-           "SYS:standard",
-
-         ignore:
-           "pid,hostname"
-
-       }
-
-     }
-
-   : undefined
-
+					ignore: "pid,hostname",
+				},
+			}
+		: undefined,
 });
 
 module.exports = { logger };

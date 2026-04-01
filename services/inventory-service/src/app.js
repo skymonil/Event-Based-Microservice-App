@@ -21,16 +21,16 @@ app.use(express.json());
 app.use(requestIdMiddleware);
 
 // Health check (important for Kubernetes)
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "UP" });
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "UP" });
 });
 
 // Routes
 app.use("/api", inventoryRoutes);
 
-app.get("/metrics", async (req, res) => {
-  res.set("Content-Type", register.contentType);
-  res.end(await register.metrics());
+app.get("/metrics", async (_req, res) => {
+	res.set("Content-Type", register.contentType);
+	res.end(await register.metrics());
 });
 
 // Central error handler (must be last)

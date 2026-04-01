@@ -4,44 +4,54 @@ const { logger } = require("../utils/logger");
 const metrics = require("../utils/metrics");
 
 const cleanupExpiredReservations = async () => {
-  const client = await db.connect();
-  
-  try {
-    await client.query("BEGIN");
+	const client = await db.connect();
 
-    // 1. Mark rows as EXPIRED and get the list
-    const expired = await inventoryQueries.findAndExpireReservations(client);
+	try {
+		await client.query("BEGIN");
 
-    if (expired.length === 0) {
-      await client.query("COMMIT");
-      return;
-    }
+		// 1. Mark rows as EXPIRED and get the list
+		const expired = await inventoryQueries.findAndExpireReservations(client);
 
-    logger.info({ count: expired.length }, "🧹 Found expired reservations, reclaiming stock...");
+		if (expired.length === 0) {
+			await client.query("COMMIT");
+			return;
+		}
 
-    for (const res of expired) {
-      // 2. Increment stock back
-      await inventoryQueries.incrementStock(
-        { productId: res.product_id, warehouse_id: res.warehouse_id, quantity: res.quantity },
-        client
-      );
+		logger.info(
+			{ count: expired.length },
+			"🧹 Found expired reservations, reclaiming stock...",
+		);
 
-      // 3. Mark the Order level status as RELEASED/EXPIRED
-      await inventoryQueries.updateOrderStatus(res.order_id, 'RELEASED', client);
-      
-      // 4. Record Metric for SRE visibility
-      metrics.releaseCounter.inc({ trigger: 'expiry' });
-    }
+		for (const res of expired) {
+			// 2. Increment stock back
+			await inventoryQueries.incrementStock(
+				{
+					productId: res.product_id,
+					warehouse_id: res.warehouse_id,
+					quantity: res.quantity,
+				},
+				client,
+			);
 
-    await client.query("COMMIT");
-    logger.info("✅ Expiry cleanup cycle completed successfully");
+			// 3. Mark the Order level status as RELEASED/EXPIRED
+			await inventoryQueries.updateOrderStatus(
+				res.order_id,
+				"RELEASED",
+				client,
+			);
 
-  } catch (err) {
-    await client.query("ROLLBACK");
-    logger.error({ err }, "❌ Failed to cleanup expired reservations");
-  } finally {
-    client.release();
-  }
+			// 4. Record Metric for SRE visibility
+			metrics.releaseCounter.inc({ trigger: "expiry" });
+		}
+
+		await client.query("COMMIT");
+		logger.info("✅ Expiry cleanup cycle completed successfully");
+	} catch (err) {
+		await client.query("ROLLBACK");
+		logger.error({ err }, "❌ Failed to cleanup expired reservations");
+	} finally {
+		client.release();
+	}
 };
 
 // Run every 60 seconds

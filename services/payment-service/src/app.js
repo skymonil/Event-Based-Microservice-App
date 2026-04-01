@@ -19,14 +19,14 @@ app.use(requestIdMiddleware);
 // Routes
 app.use("/api", paymentsRoutes);
 
-app.get("/metrics", async (req, res) => {
-  res.set("Content-Type", register.contentType);
-  res.end(await register.metrics());
+app.get("/metrics", async (_req, res) => {
+	res.set("Content-Type", register.contentType);
+	res.end(await register.metrics());
 });
 
 // Health check (important for k8s later)
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "ok" });
 });
 
 // Error handler (RFC 7807)

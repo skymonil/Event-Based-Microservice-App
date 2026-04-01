@@ -1,35 +1,27 @@
-📦 Order Service
+## 📦 Order Service
 
-Order Service is a core business microservice responsible for managing the order lifecycle in an event-driven microservices architecture.
+The **Order Service** is a core business microservice responsible for managing the order lifecycle in an event-driven microservices architecture. 
 
-It persists orders in its own database and publishes domain events to Kafka, enabling downstream services (Payment, Inventory, Notification) to react asynchronously.
+It persists orders in its own database and publishes domain events to **Kafka**, enabling downstream services (Payment, Inventory, Notification) to react asynchronously.
 
-🎯 Responsibilities
-✅ What Order Service DOES
+---
 
-Create customer orders
+### 🎯 Responsibilities
 
-Enforce ownership & authorization
+| ✅ What Order Service DOES | ❌ What Order Service DOES NOT DO |
+| :--- | :--- |
+| Create customer orders | Process payments |
+| Enforce ownership & authorization | Manage inventory |
+| Persist order state (DB per service) | Send notifications |
+| Publish `order.created` domain events | Perform synchronous inter-service calls |
+| Ensure safe retries via idempotency | |
+| Expose REST APIs for order retrieval | |
 
-Persist order state (DB per service)
+---
 
-Publish order.created domain events
+### 🧱 Architecture Overview
 
-Ensure safe retries via idempotency
-
-Expose REST APIs for order retrieval
-
-❌ What Order Service DOES NOT DO
-
-Process payments
-
-Manage inventory
-
-Send notifications
-
-Perform synchronous inter-service calls
-
-🧱 Architecture Overview
+```text
 Client
   ↓
 API Gateway / Direct Call
@@ -40,92 +32,76 @@ PostgreSQL (Orders DB)
   ↓
 Kafka → order.created
             ↓
-     Payment / Inventory / Notification
+      Payment / Inventory / Notification
+```
 
+> **Pattern used:** Event choreography (not orchestration)
 
-Pattern used: Event choreography (not orchestration)
+---
 
-🛠️ Tech Stack
+### 🛠️ Tech Stack
 
-Runtime: Node.js (Express)
+* **Runtime:** Node.js (Express)
+* **Database:** PostgreSQL
+* **Messaging:** Apache Kafka (Client: `kafkajs`)
+* **Validation:** Joi
+* **Logging:** Pino
+* **Auth:** JWT (Verification only)
+* **Migrations:** dbmate
+* **Error Standard:** RFC 7807 (Problem Details)
 
-Database: PostgreSQL
+---
 
-Messaging: Apache Kafka
+### 📁 Project Structure
 
-Kafka Client: kafkajs
-
-Validation: Joi
-
-Logging: Pino
-
-Auth: JWT (verification only)
-
-Migrations: dbmate
-
-Error Standard: RFC 7807 (Problem Details)
-
-📁 Project Structure
+```text
 order-service/
 ├── src/
-│   ├── app.js                  # Express app & middleware
-│   ├── index.js                # Server entry + graceful shutdown
+│   ├── app.js                 # Express app & middleware
+│   ├── index.js               # Server entry + graceful shutdown
 │   │
-│   ├── config/                 # Environment configuration
-│   ├── controllers/            # HTTP adapters
-│   ├── services/               # Business logic (domain layer)
+│   ├── config/                # Environment configuration
+│   ├── controllers/           # HTTP adapters
+│   ├── services/              # Business logic (domain layer)
 │   ├── db/
-│   │   ├── migrations/         # SQL migrations
-│   │   ├── queries/            # Raw SQL queries
-│   │   └── index.js            # DB pool
+│   │   ├── migrations/        # SQL migrations
+│   │   ├── queries/           # Raw SQL queries
+│   │   └── index.js           # DB pool
 │   ├── kafka/
-│   │   └── producer.js         # Kafka producer
-│   ├── middleware/             # Auth, validation, error handling
-│   ├── validators/             # Joi schemas
-│   └── utils/                  # Logger, AppError
+│   │   └── producer.js        # Kafka producer
+│   ├── middleware/            # Auth, validation, error handling
+│   ├── validators/            # Joi schemas
+│   └── utils/                 # Logger, AppError
 │
 ├── Dockerfile
 ├── .env.example
 ├── package.json
 └── README.md
+```
 
-🔑 Authentication
+---
 
-Uses JWT Bearer tokens
+### 🔑 Authentication & Idempotency
 
-JWT is validated, not issued, by this service
+#### **Authentication**
+* Uses **JWT Bearer tokens**.
+* The JWT is **validated**, not issued, by this service.
+* User identity is extracted from the token (`req.user.userId`).
+* All order access is strictly **ownership-restricted**.
 
-User identity is extracted from token (req.user.userId)
+#### **🔁 Idempotency**
+Order creation supports safe retries using an `Idempotency-Key` header.
+* **Why?** Protects against duplicate orders and handles network retries or double-submits.
+* **How it works:** Client generates a UUID; the server stores it with the order. If the same key is sent again, the same order is returned.
 
-All order access is ownership-restricted
+---
 
-🔁 Idempotency
+### 📡 Kafka Integration
 
-Order creation supports safe retries using an Idempotency-Key header.
+**Published Event Topic:** `order.created`
 
-Why?
-
-Protects against duplicate orders
-
-Handles network retries & double submits
-
-How it works
-
-Client generates UUID
-
-Server stores it with the order
-
-Same key → same order returned
-
-Example
-POST /api/orders
-Idempotency-Key: 123e4567-e89b-12d3-a456-426614174000
-
-📡 Kafka Integration
-Published Event
-
-Topic: order.created
-
+**Payload Example:**
+```json
 {
   "orderId": "uuid",
   "userId": "uuid",
@@ -134,20 +110,21 @@ Topic: order.created
   "requestId": "trace-id",
   "idempotencyKey": "uuid"
 }
+```
 
-Design Principles
+**Design Principles:**
+1.  Order is persisted before event publication.
+2.  Order Service does not know who consumes the event.
+3.  Kafka decouples downstream services.
 
-Order is persisted before event publication
+---
 
-Order Service does not know who consumes the event
+### 🧨 Error Handling (RFC 7807)
 
-Kafka decouples downstream services
+All errors follow the **RFC 7807 – Problem Details** standard for consistent, client-friendly error reporting across microservices.
 
-🧨 Error Handling (RFC 7807)
-
-All errors follow RFC 7807 – Problem Details.
-
-Example (403 Forbidden)
+**Example (403 Forbidden):**
+```json
 {
   "type": "https://order-service/problems/forbidden",
   "title": "Forbidden",
@@ -155,78 +132,27 @@ Example (403 Forbidden)
   "detail": "You are not allowed to access this order",
   "instance": "/api/orders/abc"
 }
+```
 
-Benefits
+---
 
-Consistent error format
+### 🌐 API Endpoints
 
-Client-friendly
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/api/orders` | Create Order (Requires `Authorization` & `Idempotency-Key`) |
+| **GET** | `/api/orders/:id` | Get Order by ID (Returns 403 if ownership fails) |
+| **GET** | `/api/orders` | Get all orders for the authenticated user |
 
-Works across microservices
+---
 
-No error leakage
+### 🚀 Production Readiness
 
-🌐 API Endpoints
-Create Order
-POST /api/orders
+* ✔ **Database per service:** Complete data isolation.
+* ✔ **Stateless API:** Scales horizontally with ease.
+* ✔ **Graceful shutdown:** Cleans up DB pools and Kafka producers.
+* ✔ **Structured logging:** Pino for high-performance JSON logs.
+* ✔ **Idempotent writes:** Prevents data duplication on retries.
 
-
-Headers
-
-Authorization: Bearer <JWT>
-
-Idempotency-Key: <UUID>
-
-Body
-
-{
-  "items": [
-    { "productId": "uuid", "quantity": 2 }
-  ],
-  "totalAmount": 499
-}
-
-Get Order by ID
-GET /api/orders/:id
-
-
-Returns 403 if order does not belong to the user.
-
-Get Orders for User
-GET /api/orders
-
-🧪 Local Development
-1️⃣ Install dependencies
-npm install
-
-2️⃣ Set environment variables
-cp .env.example .env
-
-3️⃣ Run DB migrations
-dbmate up
-
-4️⃣ Start service
-npm run dev
-
-⚙️ Environment Variables
-PORT=3001
-DB_URL=postgres://postgres:admin@localhost:5432/orders
-JWT_SECRET=your-secret
-KAFKA_BROKERS=localhost:9092
-LOG_LEVEL=debug
-
-🚀 Production Readiness
-
-✔ Database per service
-✔ Stateless API
-✔ Graceful shutdown
-✔ Structured logging
-✔ Event-driven integration
-✔ Idempotent writes
-✔ RFC 7807 error standard
-
-🏆 Design Philosophy
-
-“Order Service is the source of truth for orders.
-It publishes facts, not commands.
-Other services react asynchronously.”
+> **Design Philosophy:**
+> *"Order Service is the source of truth for orders. It publishes facts, not commands. Other services react asynchronously."*
