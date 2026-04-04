@@ -1,7 +1,7 @@
 const inventoryQueries = require("../db/queries/inventory.queries");
 const db = require("../db/index");
 const { logger } = require("../utils/logger");
-const metrics = require("../utils/metrics");
+const metrics = require("../metrics");
 
 const cleanupExpiredReservations = async () => {
 	const client = await db.connect();

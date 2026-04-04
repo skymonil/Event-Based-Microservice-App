@@ -1,4 +1,5 @@
 // A simple script to copy Postgres -> Redis
+// src/scripts/hydrate-redis.js
 const db = require("../db/index");
 const redis = require("../redis/client");
 

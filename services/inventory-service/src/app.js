@@ -4,7 +4,7 @@ const cors = require("cors");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
 const inventoryRoutes = require("./routes/inventory.routes");
 const errorHandler = require("./middleware/error.middleware");
-const { register } = require("./utils/metrics");
+const { register } = require("./metrics");
 
 const app = express();
 

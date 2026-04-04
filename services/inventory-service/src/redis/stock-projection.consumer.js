@@ -6,6 +6,10 @@ const { extractKafkaContext } = require("../tracing/kafka-context");
 const consumer = kafka.consumer({
 	groupId: "inventory-stock-projection",
 });
+const metrics = require("../metrics");
+
+const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+
 const { context, propagation, trace } = require("@opentelemetry/api");
 const tracer = trace.getTracer("inventory-redis-projection");
 
@@ -93,17 +97,61 @@ const startRedisProjection = async () => {
 
 const decrementStock = async (items) => {
 	for (const item of items) {
+		const end = metrics.redisLatency.startTimer({
+			operation: "decrement",
+			service: SERVICE_NAME,
+		});
 		const key = `stock:product:${item.productId}`;
+		try {
+			await redis.multi().hincrby(key, "available", -item.quantity).exec();
 
-		await redis.multi().hincrby(key, "available", -item.quantity).exec();
+			metrics.redisOperations.inc({
+				operation: "decrement",
+
+				status: "success",
+				service: SERVICE_NAME,
+			});
+		} catch (err) {
+			metrics.redisOperations.inc({
+				operation: "decrement",
+
+				status: "error",
+				service: SERVICE_NAME,
+			});
+
+			throw err;
+		} finally {
+			end({
+				service: SERVICE_NAME,
+			});
+		}
 	}
 };
-
 const incrementStock = async (items) => {
 	for (const item of items) {
-		const key = `stock:product:${item.productId}`;
+		const end = metrics.redisLatency.startTimer({
+			operation: "increment",
+			service: SERVICE_NAME,
+		});
+		try {
+			await redis.multi().hincrby(key, "available", item.quantity).exec();
 
-		await redis.multi().hincrby(key, "available", item.quantity).exec();
+			metrics.redisOperations.inc({
+				operation: "increment",
+				status: "success",
+				service: SERVICE_NAME,
+			});
+		} catch (err) {
+			metrics.redisOperations.inc({
+				operation: "increment",
+				status: "error",
+				service: SERVICE_NAME,
+			});
+
+			throw err;
+		} finally {
+			end();
+		}
 	}
 };
 

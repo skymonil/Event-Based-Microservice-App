@@ -3,13 +3,22 @@ const inventoryQueries = require("../db/queries/inventory.queries");
 const { BusinessError, InfraError, AppError } = require("../utils/app-error");
 const { logger } = require("../utils/logger");
 const db = require("../db/index");
-const metrics = require("../utils/metrics");
+const metrics = require("../metrics");
 const { propagation, context, trace } = require("@opentelemetry/api");
 const tracer = trace.getTracer("inventory-service");
 /**
  * Create a new product in the catalog
  */
+
+const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+
 const createProduct = async ({ id, name, sku }) => {
+	const end = metrics.dbQueryDuration.startTimer({
+		operation: "create_product",
+
+		service: SERVICE_NAME,
+	});
+
 	const client = await db.connect();
 
 	try {
@@ -18,6 +27,11 @@ const createProduct = async ({ id, name, sku }) => {
 		// 1. Check for duplicates (Inside transaction for safety)
 		const existing = await inventoryQueries.getProductById(id, client); // optimized to use client if possible
 		if (existing) {
+			metrics.dbErrors.inc({
+				operation: "create_product",
+
+				service: SERVICE_NAME,
+			});
 			logger.warn({ productId: id }, "Attempted to create duplicate product");
 			throw new AppError({
 				status: 409,
@@ -45,7 +59,7 @@ const createProduct = async ({ id, name, sku }) => {
 					stock: { total: 0, available: 0 },
 				},
 				metadata: {
-					source: "inventory-service",
+					source: SERVICE_NAME,
 				},
 			},
 			client,
@@ -58,6 +72,7 @@ const createProduct = async ({ id, name, sku }) => {
 		await client.query("ROLLBACK");
 		throw err;
 	} finally {
+		end();
 		client.release();
 	}
 };
@@ -66,6 +81,12 @@ const createProduct = async ({ id, name, sku }) => {
  * Adjust stock levels (SET or ADD)
  */
 const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
+	const end = metrics.dbQueryDuration.startTimer({
+		operation: "adjust_stock",
+
+		service: SERVICE_NAME,
+	});
+
 	const client = await db.connect();
 
 	try {
@@ -90,6 +111,11 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
 				client,
 			);
 		}
+		metrics.stockAdjustments.inc({
+			mode,
+
+			service: SERVICE_NAME,
+		});
 
 		// 3. 📢 Emit 'stock.adjusted' for Redis Sync
 		await inventoryQueries.createOutboxEntry(
@@ -118,6 +144,7 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
 		await client.query("ROLLBACK");
 		throw error;
 	} finally {
+		end();
 		client.release();
 	}
 };
@@ -126,6 +153,12 @@ const adjustStock = async ({ productId, warehouseId, quantity, mode }) => {
  * Check if stock is sufficient (DB Fallback)
  */
 const checkAvailability = async ({ productId, quantity, warehouseId }) => {
+	const end = metrics.dbQueryDuration.startTimer({
+		operation: "check_availability",
+
+		service: SERVICE_NAME,
+	});
+
 	const requiredQty = parseInt(quantity, 10) || 1;
 	// logger.debug({ productId, requiredQty, warehouseId }, "Checking stock availability (DB)");
 
@@ -139,6 +172,13 @@ const checkAvailability = async ({ productId, quantity, warehouseId }) => {
 	} else {
 		availableCount = await inventoryQueries.getGlobalStockLevel(productId);
 	}
+	metrics.availabilityChecks.inc({
+		source: "db",
+
+		service: SERVICE_NAME,
+	});
+
+	end();
 
 	const isAvailable = availableCount >= requiredQty;
 
@@ -294,8 +334,19 @@ const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
 
 				await client.query("COMMIT");
 
-				metrics.reservationCounter.inc({ status: "success" });
+				metrics.reservationCounter.inc({
+					status: "success",
+					service: SERVICE_NAME,
+				});
+				metrics.activeReservationsGauge.inc({
+					service: SERVICE_NAME,
+				});
 				logger.info({ orderId }, "✅ Stock reserved & Order marked RESERVED");
+				metrics.reservationCounter.inc({
+					status: "success",
+					reason: "none",
+					service: SERVICE_NAME,
+				});
 				return { success: true };
 			} catch (error) {
 				await client.query("ROLLBACK");
@@ -304,7 +355,10 @@ const reserveStock = async ({ orderId, items, totalAmount, userId }) => {
 				if (error instanceof BusinessError) reason = "business_rule";
 				else if (error.status === 409) reason = "out_of_stock";
 
-				metrics.reservationCounter.inc({ status: "failed", reason });
+				metrics.reservationCounter.inc({
+					status: "failed",
+					service: SERVICE_NAME,
+				});
 
 				// FAILURE HANDLER
 				try {
@@ -407,6 +461,11 @@ const releaseStock = async (orderId) => {
 				}
 
 				await client.query("COMMIT");
+				metrics.releaseCounter.inc({
+					trigger: "payment_failed",
+
+					service: SERVICE_NAME,
+				});
 				logger.info(
 					{ orderId, count: itemsReleased },
 					"✅ Stock release cycle completed",

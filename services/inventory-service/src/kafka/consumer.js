@@ -1,10 +1,11 @@
 // services/inventory-service/src/kafka/consumer.js
 const { Kafka } = require("kafkajs");
-const { trace, context, propagation } = require("@opentelemetry/api");
+const { trace, context } = require("@opentelemetry/api");
 const inventoryService = require("../services/inventory.service");
 const { logger } = require("../utils/logger");
 const { AppError, BusinessError, InfraError } = require("../utils/app-error");
 const { extractKafkaContext } = require("../tracing/kafka-context");
+const metrics = require("../metrics");
 const kafka = new Kafka({
 	clientId: "inventory-service",
 	brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
@@ -13,6 +14,7 @@ const kafka = new Kafka({
 		retries: 10, // Try 10 times before crashing
 	},
 });
+const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
 
 const consumer = kafka.consumer({
 	groupId: "inventory-group",
@@ -85,8 +87,22 @@ const startConsumer = async () => {
 							default:
 								logger.warn({ topic }, "Received message for unknown topic");
 						}
+						metrics.kafkaMessagesConsumed.inc({
+							topic,
+
+							status: "success",
+
+							service: SERVICE_NAME,
+						});
 					} catch (err) {
 						span.recordException(err);
+						metrics.kafkaMessagesConsumed.inc({
+							topic,
+
+							status: "failure",
+
+							service: SERVICE_NAME,
+						});
 						// ====================================================
 						// 🛡️ ERROR CLASSIFICATION & RETRY STRATEGY
 						// ====================================================
@@ -171,6 +187,9 @@ const handleOrderCreated = async (payload) => {
 const handleReleaseStock = async (payload) => {
 	const { orderId } = payload;
 	await inventoryService.releaseStock(orderId);
+	metrics.activeReservationsGauge.dec({
+		service: SERVICE_NAME,
+	});
 };
 
 module.exports = { startConsumer };
