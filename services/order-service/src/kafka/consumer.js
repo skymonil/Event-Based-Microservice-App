@@ -8,13 +8,7 @@ const {
 const kafka = require("./kafka");
 const orderService = require("../services/order.service");
 const { sendToDLQ } = require("./dlq.producer");
-const { logger } = require("../utils/logger");
-const {
-	context,
-	propagation,
-	trace,
-	SpanStatusCode,
-} = require("@opentelemetry/api");
+const { context, trace, SpanStatusCode } = require("@opentelemetry/api");
 const { extractKafkaContext } = require("../tracing/kafka-context");
 const tracer = trace.getTracer("order-service");
 const SERVICE_NAME = "order-service";
@@ -65,36 +59,34 @@ const startConsumer = async () => {
 			const extractedContext = extractKafkaContext(message);
 
 			await context.with(extractedContext, async () => {
+				const span = tracer.startSpan(`process ${topic}`);
 				try {
-					await tracer.startActiveSpan(`process ${topic}`, async (span) => {
-						span.setAttribute("order.id", event.orderId);
-						span.setAttribute("payment.id", event.paymentId);
+					span.setAttribute("order.id", event.orderId);
+					span.setAttribute("payment.id", event.paymentId);
 
-						if (topic === "payment.completed") {
-							await orderService.handlePaymentCompleted(
-								event.orderId,
-								event.paymentId,
-								eventId,
-							);
-						} else if (topic === "payment.failed") {
-							await orderService.handlePaymentFailed(
-								event.orderId,
-								event.paymentId,
-								event.reason,
-							);
-						} else if (topic === "payment.refunded") {
-							await orderService.handlePaymentRefunded({
-								orderId: event.orderId,
-								paymentId: event.paymentId,
-							});
-						}
-
-						kafkaMessagesConsumed.inc({
-							topic,
-							service: SERVICE_NAME,
-							status: "success",
+					if (topic === "payment.completed") {
+						await orderService.handlePaymentCompleted(
+							event.orderId,
+							event.paymentId,
+							eventId,
+						);
+					} else if (topic === "payment.failed") {
+						await orderService.handlePaymentFailed(
+							event.orderId,
+							event.paymentId,
+							event.reason,
+						);
+					} else if (topic === "payment.refunded") {
+						await orderService.handlePaymentRefunded({
+							orderId: event.orderId,
+							paymentId: event.paymentId,
 						});
-						span.end();
+					}
+
+					kafkaMessagesConsumed.inc({
+						topic,
+						service: SERVICE_NAME,
+						status: "success",
 					});
 				} catch (err) {
 					span.recordException(err);
@@ -122,6 +114,8 @@ const startConsumer = async () => {
 						status: "failed",
 					}); // Track failures too
 					await sendToDLQ({ topic, message, error: err });
+				} finally {
+					span.end();
 				}
 			});
 		},

@@ -6,3 +6,4 @@ dist
 Dockerfile
 docker-compose.yml
 .env
+tests/node_modules
