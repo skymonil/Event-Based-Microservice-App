@@ -1,8 +1,0 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-# Suppress git warnings
-git config --global core.symlinks false
-
-# Run lint-staged safely
-pnpm lint-staged || true

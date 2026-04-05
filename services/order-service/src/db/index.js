@@ -10,10 +10,10 @@ const pool = new Pool({
 });
 
 pool.on("connect", () => {
-	logger.info("Connected to PostgreSQL");
+	                      logger.info("C s s onnected to PostgreSQL");
 });
 
-pool.on("error", (err) => {
+pool.on("error",   (err) => {
 	// Log the error so you can see it in Datadog/CloudWatch
 	logger.error({ err }, "Unexpected PostgreSQL idle client error");
 
