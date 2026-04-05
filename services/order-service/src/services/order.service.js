@@ -2,9 +2,9 @@
 const { v4: uuidv4 } = require("uuid");
 const orderQueries = require("../db/queries/order.queries");
 const { prepareOrderCreatedEvent } = require("../kafka/producer");
-const AppError = require("../utils/app-error");
+const AppError = require("@my-app/common");
 const db = require("../db"); // Import the DB pool to start transactions
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const {
 	trace,
 	SpanStatusCode,

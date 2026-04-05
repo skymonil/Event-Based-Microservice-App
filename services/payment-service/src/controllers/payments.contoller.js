@@ -1,6 +1,5 @@
 // src/controllers/user.controller.js
-const { logger } = require("../utils/logger");
-const { getRequestLogger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const paymentService = require("../services/payments.service");
 
 // Get Payments for a specific order

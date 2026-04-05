@@ -1,6 +1,6 @@
 // kafka/producer.js
 const _kafka = require("./kafka");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const { trace, context, propagation } = require("@opentelemetry/api");
 
 const prepareOrderCreatedEvent = (event) => {

@@ -17,7 +17,6 @@ RUN corepack enable pnpm
 
 WORKDIR /app
 
-
 # copy workspace metadata
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
@@ -40,6 +39,8 @@ FROM base AS builder
 ARG SERVICE_NAME
 
 WORKDIR /app
+
+COPY packages/common ./packages/common
 
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

@@ -1,7 +1,7 @@
 // src/routes/user.routes.js
 const express = require("express");
 const router = express.Router();
-const authenticate = require("../middleware/auth.middleware");
+const {authMiddleware} = require("@my-app/common");
 const validate = require("../middleware/validate.middleware");
 
 const {
@@ -12,16 +12,17 @@ const {
 	getPaymentsByOrder,
 	getPaymentsForUser,
 } = require("../controllers/payments.contoller");
+const { auth } = require("../config/config");
 
 // Get payments for a specific order
 router.get(
 	"/payments/order/:orderId",
-	authenticate,
+	authMiddleware,
 	validate(getPaymentsByOrderSchema, "params"),
 	getPaymentsByOrder,
 );
 
 //Get all payments for a Logged-in User
 
-router.get("/payments", authenticate, getPaymentsForUser);
+router.get("/payments", authMiddleware, getPaymentsForUser);
 module.exports = router;

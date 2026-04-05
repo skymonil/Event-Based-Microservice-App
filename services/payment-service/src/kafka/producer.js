@@ -1,5 +1,5 @@
 // services/payment-service/src/kafka/producer.js
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const { Partitioners } = require("kafkajs");
 const _kafka = require("./kafka");
 const { context, propagation } = require("@opentelemetry/api");

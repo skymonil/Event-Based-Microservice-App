@@ -121,7 +121,7 @@ services:
     container_name: user-service
     volumes:
       - ./services/user-service:/app/services/user-service
-      - /app/services/user-service/node_modules
+      - ./packages:/app/packages
     env_file:
       - ./services/user-service/.env
     environment:
@@ -136,7 +136,7 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
-    command: ["pnpm", "run", "dev"]
+    command:  pnpm run dev
 
   order-service:
     build:
@@ -147,8 +147,8 @@ services:
         SERVICE_NAME: order-service
     container_name: order-service
     volumes:
-      - ./services/order-service:/app/services/order-service
-      - /app/services/order-service/node_modules
+       - ./services/order-service:/app/services/order-service
+       - ./packages:/app/packages
     env_file:
       - ./services/order-service/.env
     environment:
@@ -163,7 +163,7 @@ services:
         condition: service_started
     ports:
       - "3001:3001"
-    command: ["pnpm", "run", "dev"]
+    command:  pnpm run dev && pnpm run migrate
     
 
   payment-service:
@@ -175,8 +175,9 @@ services:
         SERVICE_NAME: payment-service
     container_name: payment-service
     volumes:
-      - ./services/payment-service:/app/services/payment-service
-      - /app/services/payment-service/node_modules
+       - ./services/payment-service:/app/services/payment-service
+       - ./packages:/app/packages
+
     env_file:
       - ./services/payment-service/.env
     environment:
@@ -191,7 +192,7 @@ services:
         condition: service_started
     ports:
       - "3002:3002"
-    command: ["pnpm", "run", "dev"]
+    command:   pnpm run dev && pnpm run migrate
 
   inventory-service: 
     build:
@@ -203,7 +204,7 @@ services:
     container_name: inventory-service
     volumes:
       - ./services/inventory-service:/app/services/inventory-service
-      - /app/services/inventory-service/node_modules
+      - ./packages:/app/packages
     env_file:
       - ./services/inventory-service/.env
     environment:
@@ -224,7 +225,7 @@ services:
         condition: service_healthy
     ports:
       - "3003:3003"
-    command: ["pnpm", "run", "dev"]
+    command:  pnpm run dev && pnpm run migrate
 
   # =======================
   # INITIALIZATION

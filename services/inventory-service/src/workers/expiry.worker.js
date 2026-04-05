@@ -1,6 +1,6 @@
 const inventoryQueries = require("../db/queries/inventory.queries");
 const db = require("../db/index");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const metrics = require("../metrics");
 
 const cleanupExpiredReservations = async () => {

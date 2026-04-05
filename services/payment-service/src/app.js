@@ -1,20 +1,26 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-const { register } = require("./metrics");
+
+const { errorMiddleware, prometheusMiddleware,  } = require("@my-app/common");
+
 const paymentsRoutes = require("./routes/payments.routes");
-const errorHandler = require("./middleware/error.middleware");
-const requestIdMiddleware = require("./middleware/request-id.middleware");
+
+
+const metrics = require("./metrics");
 
 const app = express();
 
 // Security & basics
 app.use(helmet());
 app.use(cors());
+
+// Prometheus metrics middleware
+app.use(prometheusMiddleware(metrics));
+
 app.use(express.json());
 
-// Request tracing
-app.use(requestIdMiddleware);
+
 
 // Routes
 app.use("/api", paymentsRoutes);
@@ -30,6 +36,6 @@ app.get("/health", (_req, res) => {
 });
 
 // Error handler (RFC 7807)
-app.use(errorHandler);
+app.use(errorMiddleware);
 
 module.exports = app;

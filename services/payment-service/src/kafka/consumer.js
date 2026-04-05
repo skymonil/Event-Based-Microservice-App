@@ -8,7 +8,7 @@ const {
 
 const kafka = require("./kafka");
 const paymentService = require("../services/payments.service");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const { sendToDLQ } = require("./dlq.producer");
 const { exponentialBackoff } = require("../utils/backoff");
 const { extractKafkaContext } = require("../tracing/kafka-context"); // ⭐ ADD THIS

@@ -1,8 +1,9 @@
-require("./telemetry");
+const {initTelemetry} = require("@my-app/common");
+initTelemetry("inventory-service");
 const http = require("http");
 const app = require("./app");
 const config = require("./config/config");
-const { logger } = require("./utils/logger");
+const { logger } = require("@my-app/common");
 // ✅ Import disconnectConsumer so shutdown doesn't crash
 const { startConsumer, disconnectConsumer } = require("./kafka/consumer");
 const { startRedisProjection } = require("./redis/stock-projection.consumer");

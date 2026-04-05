@@ -1,7 +1,7 @@
 // src/services/inventory.service.js
 const inventoryQueries = require("../db/queries/inventory.queries");
-const { BusinessError, InfraError, AppError } = require("../utils/app-error");
-const { logger } = require("../utils/logger");
+const { BusinessError, InfraError, AppError } = require("@my-app/common");
+const { logger } = require("@my-app/common");
 const db = require("../db/index");
 const metrics = require("../metrics");
 const { propagation, context, trace } = require("@opentelemetry/api");

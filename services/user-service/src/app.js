@@ -1,15 +1,20 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-const requestIdMiddleware = require("./middleware/request-id.middleware");
+
+const { 
+    prometheusMiddleware, 
+    errorMiddleware, // Use the shared one!
+	logger
+} = require("@my-app/common");
+const metrics = require("./metrics");
 const userRoutes = require("./routes/user.routes");
-const errorHandler = require("./middleware/error.middleware");
-const prometheusMiddleware = require("./middleware/prometheusMiddleware");
+
 const { client } = require("./metrics");
 
 const app = express();
 
-app.use(prometheusMiddleware);
+app.use(prometheusMiddleware(metrics));
 
 //Prometheus Scrape Endpoint
 app.get("/metrics", async (_req, res) => {
@@ -27,8 +32,7 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
-// 🔹 Request ID middleware (FIRST)
-app.use(requestIdMiddleware);
+
 
 // Health check (important for Kubernetes)
 app.get("/health", (_req, res) => {
@@ -39,6 +43,6 @@ app.get("/health", (_req, res) => {
 app.use("/api", userRoutes);
 
 // Central error handler (must be last)
-app.use(errorHandler);
+app.use(errorMiddleware);
 
 module.exports = app;

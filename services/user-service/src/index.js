@@ -1,7 +1,10 @@
+const { initTelemetry } = require("@my-app/common");
+
+initTelemetry("user-service");
 const http = require("node:http");
 const app = require("./app");
 const config = require("./config/config");
-const { logger } = require("./utils/logger"); // This extracts just the logger
+const { logger } = require("@my-app/common"); // This extracts just the logger
 const gracefulShutdown = require("http-graceful-shutdown");
 const server = http.createServer(app);
 

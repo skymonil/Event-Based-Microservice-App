@@ -1,9 +1,9 @@
 // services/payment-service/src/services/payments.service.js
 const { v4: uuidv4 } = require("uuid");
 const paymentQueries = require("../db/queries/payments.queries");
-const AppError = require("../utils/app-error");
+const AppError = require("@my-app/common");
 const db = require("../db");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const {
 	context,
 	propagation,

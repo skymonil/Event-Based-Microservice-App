@@ -1,6 +1,6 @@
 // src/controllers/user.controller.js
 const userService = require("../services/user.service");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 /**
  * Create a new user
  */

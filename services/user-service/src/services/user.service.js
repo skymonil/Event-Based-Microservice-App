@@ -10,7 +10,7 @@ const {
 	usersCreatedTotal,
 	loginAttempts,
 } = require("../metrics");
-const AppError = require("../utils/app-error");
+const AppError = require("../../../../packages/common/src/app-error");
 
 const trackError = (type) => {
 	try {

@@ -1,6 +1,6 @@
 // controllers/order.controller.js
 const orderService = require("../services/order.service");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 /**
  * Create a new order
  */

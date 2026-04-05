@@ -2,8 +2,8 @@
 const { Kafka } = require("kafkajs");
 const { trace, context } = require("@opentelemetry/api");
 const inventoryService = require("../services/inventory.service");
-const { logger } = require("../utils/logger");
-const { AppError, BusinessError, InfraError } = require("../utils/app-error");
+const { logger } = require("@my-app/common");
+const { AppError, BusinessError, InfraError } = require("@my-app/common");
 const { extractKafkaContext } = require("../tracing/kafka-context");
 const metrics = require("../metrics");
 const kafka = new Kafka({

@@ -1,12 +1,13 @@
-require("./telemetry");
+const {initTelemetry} = require("@my-app/common");
+initTelemetry("order-service");
 const http = require("http");
 const gracefulShutdown = require("http-graceful-shutdown");
 
 const app = require("./app");
 const config = require("./config/config");
-const { logger } = require("./utils/logger");
+const { logger } = require("@my-app/common");
 const db = require("./db");
-const { connectProducer, disconnectProducer } = require("./kafka/producer");
+const { connectProducer } = require("./kafka/producer");
 const { startConsumer, disconnectConsumer } = require("./kafka/consumer");
 
 const server = http.createServer(app);

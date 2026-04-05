@@ -1,4 +1,4 @@
-const AppError = require("../utils/app-error");
+const AppError = require("@my-app/common") // Import AppError from common package
 
 /**
  * Generic Joi validation middleware

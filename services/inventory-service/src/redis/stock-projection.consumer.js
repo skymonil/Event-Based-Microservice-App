@@ -1,7 +1,7 @@
 //src/redis/stock-projection.consumer.js
 const kafka = require("../kafka");
 const redis = require("./client");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 const { extractKafkaContext } = require("../tracing/kafka-context");
 const consumer = kafka.consumer({
 	groupId: "inventory-stock-projection",

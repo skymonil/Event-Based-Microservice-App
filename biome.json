@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"ignore": ["node_modules", "dist", "pnpm-lock.yaml", ".git"]
 	},
 	"formatter": {
 		"enabled": true,

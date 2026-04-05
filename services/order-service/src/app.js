@@ -1,15 +1,12 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-const requestIdMiddleware = require("./middleware/request-id.middleware");
 const orderRoutes = require("./routes/order.routes");
-const errorHandler = require("./middleware/error.middleware");
 const db = require("./db");
-const prometheusMiddleware = require("./middleware/prometheusMiddleware");
 const app = express();
 const { register } = require("./metrics");
-const { logger } = require("./utils/logger");
-
+const {logger, errorMiddleware, prometheusMiddleware} = require('@my-app/common')
+const metrics = require("./metrics");
 // Security headers
 app.use(helmet());
 
@@ -19,19 +16,21 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
+app.use(prometheusMiddleware(metrics));
+
 app.get("/metrics", async (_req, res) => {
 	res.set("Content-Type", register.contentType);
 	res.end(await register.metrics());
 });
 // 🔹 Request ID middleware (FIRST)
-app.use(prometheusMiddleware);
+
 
 /**
  * Liveness Probe: Is thdfdfe process running?
  * If this returns a non-200, K8s kills the Pod.
  */
 
-app.use(requestIdMiddleware);
+
 app.get("/health/live", (_req, res) => {
 	res.status(200).send("OK");
 });
@@ -55,6 +54,6 @@ app.get("/health/ready", async (_req, res) => {
 app.use("/api", orderRoutes);
 
 // Central error handler (must be last)
-app.use(errorHandler);
+app.use(errorMiddleware);
 
 module.exports = app;

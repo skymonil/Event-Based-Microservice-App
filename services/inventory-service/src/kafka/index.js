@@ -1,7 +1,7 @@
 // src/kafka/index.js
 const { Kafka, logLevel } = require("kafkajs");
 const config = require("../config/config"); // Assuming you have a config loader
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 
 // 1. Initialize the Kafka Client
 const kafka = new Kafka({

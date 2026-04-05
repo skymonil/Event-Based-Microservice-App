@@ -1,7 +1,7 @@
 // src/controllers/inventory.controller.js
 const readService = require("../services/inventory.read.service");
 const inventoryService = require("../services/inventory.service");
-const { logger } = require("../utils/logger");
+const { logger } = require("@my-app/common");
 
 /**
  * 1. Create Product
