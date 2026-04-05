@@ -1,0 +1,55 @@
+{
+  "lastValidatedTimestamp": 1775327153412,
+  "projects": {
+    "/app": {
+      "name": "Event-Based-Microservice-App",
+      "version": "1.0.0"
+    },
+    "/app/packages/common": {
+      "name": "@my-app/common",
+      "version": "1.0.0"
+    },
+    "/app/services/inventory-service": {
+      "name": "inventory-service",
+      "version": "1.0.0"
+    },
+    "/app/services/order-service": {
+      "name": "order-service",
+      "version": "1.0.0"
+    },
+    "/app/services/payment-service": {
+      "name": "payment-service",
+      "version": "1.0.0"
+    },
+    "/app/services/user-service": {
+      "name": "user-service",
+      "version": "1.0.0"
+    }
+  },
+  "pnpmfiles": [],
+  "settings": {
+    "autoInstallPeers": true,
+    "catalogs": {},
+    "dedupeDirectDeps": false,
+    "dedupeInjectedDeps": true,
+    "dedupePeerDependents": true,
+    "dev": true,
+    "excludeLinksFromLockfile": false,
+    "hoistPattern": [
+      "*"
+    ],
+    "hoistWorkspacePackages": true,
+    "injectWorkspacePackages": false,
+    "linkWorkspacePackages": false,
+    "nodeLinker": "isolated",
+    "optional": true,
+    "preferWorkspacePackages": false,
+    "production": true,
+    "publicHoistPattern": [],
+    "workspacePackagePatterns": [
+      "services/*",
+      "packages/common"
+    ]
+  },
+  "filteredInstall": false
+}
