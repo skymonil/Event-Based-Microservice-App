@@ -36,7 +36,7 @@ jobs:
         with:
           name: ${{ inputs.service_name }}-digest
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITOPS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Image Digest via Kustomize
         working-directory: gitops/services/${{ inputs.service_name }}/overlays/${{ inputs.overlay }}
