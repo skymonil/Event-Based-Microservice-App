@@ -1,71 +1,15 @@
-# .github/workflows/user-service-ci.yaml
-name: user-service-ci
-
-env:
-  SERVICE_NAME: user-service
-
+name: User Service Pipeline
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "services/user-service/**"
-
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "services/user-service/**"
+    branches: [main]
+    paths: ["services/user-service/**", "packages/**", "pnpm-lock.yaml"]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install deps
-        working-directory: services/${{env.SERVICE_NAME}}
-        run: npm install
-
-
-      # ✅ Push ONLY on main branch
-      - name: Login to DockerHub
-        if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./services/${{env.SERVICE_NAME}}/Dockerfile
-          target: prod
-          push: ${{ github.ref == 'refs/heads/main' }}
-
-          tags: skymonil/${{env.SERVICE_NAME}}:${{ github.sha }}
-
-      - name: Write digest to file
-        if: github.ref == 'refs/heads/main'
-        run: echo "skymonil/${{env.SERVICE_NAME}}@${{ steps.build.outputs.digest }}" > image-digest.txt
-
-      - name: Upload digest artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{env.SERVICE_NAME}}-digest
-          path: image-digest.txt
-          retention-days: 1
-        
-        
-
-
+  call-ci:
+    uses: ./.github/workflows/reusable-node-ci.yaml
+    with:
+      service_name: user-service
+    secrets:
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

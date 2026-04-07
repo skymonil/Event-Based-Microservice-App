@@ -1,15 +1,15 @@
-name: Order Service Pipeline
+name: Inventory Service Pipeline
 
 on:
   push:
     branches: [main]
-    paths: ["services/order-service/**", "packages/**", "pnpm-lock.yaml"]
+    paths: ["services/inventory-service/**", "packages/**", "pnpm-lock.yaml"]
 
 jobs:
   call-ci:
     uses: ./.github/workflows/reusable-node-ci.yaml
     with:
-      service_name: order-service
+      service_name: inventory-service
     secrets:
       DOCKER_USER: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

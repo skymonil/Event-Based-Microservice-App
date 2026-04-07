@@ -1,4 +1,4 @@
-const {initTelemetry} = require("@my-app/common");
+const { initTelemetry } = require("@my-app/common");
 initTelemetry("order-service");
 const http = require("http");
 const gracefulShutdown = require("http-graceful-shutdown");
@@ -30,7 +30,7 @@ gracefulShutdown(server, {
 		// 1. Disconnect Consumer first: Stop receiving new messages
 		try {
 			logger.info("Disconnecting Kafka Consumer...");
-			await disconnectConsumer();
+			         await disconnectConsumer();
 			logger.info("Kafka Consumer disconnected.");
 		} catch (err) {
 			logger.error("Error disconnecting Kafka Consumer:", err);
@@ -38,10 +38,10 @@ gracefulShutdown(server, {
 
 		try {
 			logger.info("Closing database connection...");
-			await db.close();
-			logger.info("Database connection closed.");
+			 await db.close();
+			      logger.info("Database connection closed.");
 		} catch (err) {
-			logger.error("Error closing database:", err);
+			                      logger.error("Error closing database:", err);
 		}
 	},
 	finally: () => {

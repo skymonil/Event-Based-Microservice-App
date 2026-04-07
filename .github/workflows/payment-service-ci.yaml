@@ -3,13 +3,13 @@ name: Order Service Pipeline
 on:
   push:
     branches: [main]
-    paths: ["services/order-service/**", "packages/**", "pnpm-lock.yaml"]
+    paths: ["services/payment-service/**", "packages/**", "pnpm-lock.yaml"]
 
 jobs:
   call-ci:
     uses: ./.github/workflows/reusable-node-ci.yaml
     with:
-      service_name: order-service
+      service_name: payment-service
     secrets:
       DOCKER_USER: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

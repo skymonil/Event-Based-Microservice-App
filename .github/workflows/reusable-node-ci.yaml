@@ -1,0 +1,49 @@
+name: Generic Node CI
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+    secrets:
+      DOCKER_USER:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Docker image
+        run: |
+          docker build --build-arg SERVICE_NAME=${{ inputs.service_name }} -t skymonil/${{ inputs.service_name }}:${{ github.sha }} -f docker/node-service.Dockerfile . 
+
+      - name: Login to DockerHub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker push skymonil/${{ inputs.service_name }}:${{ github.sha }}
