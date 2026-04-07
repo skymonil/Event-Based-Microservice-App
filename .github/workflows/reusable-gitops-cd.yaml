@@ -30,14 +30,7 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
 
-      # We download the artifact from the CI workflow that triggered this
-      - name: Download image digest artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.service_name }}-digest
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Update Image Digest via Kustomize
         working-directory: gitops/services/${{ inputs.service_name }}/overlays/${{ inputs.overlay }}
         run: |
