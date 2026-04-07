@@ -50,9 +50,8 @@ jobs:
         run: |
           docker push skymonil/${{ inputs.service_name }}:${{ github.sha }}
       
-      - name: Save Image Digest
-        if: github.ref == 'refs/heads/main'
-        run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' skymonil/${{ inputs.service_name }}:${{ github.sha }} | awk -F@ '{print $2}')
-          echo "Extracted Digest: $DIGEST"
-          echo "$DIGEST" > image-digest.txt
+      - name: Upload Image Digest Artifact
+        uses: actions/upload-artifact@v4 # ✅ MUST BE v4
+        with:
+          name: ${{ inputs.service_name }}-digest
+          path: image-digest.txt
