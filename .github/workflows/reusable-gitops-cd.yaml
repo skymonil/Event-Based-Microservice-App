@@ -9,17 +9,18 @@ on:
       overlay:
         required: false
         type: string
-        default: 'dev'
+        default: dev
+
     secrets:
       GITOPS_TOKEN:
         required: true
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
+
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
@@ -30,19 +31,28 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
 
-      
-      - name: Update Image Digest via Kustomize
+      - name: Update image tag
         working-directory: gitops/services/${{ inputs.service_name }}/overlays/${{ inputs.overlay }}
         run: |
-          DIGEST=$(cat $GITHUB_WORKSPACE/image-digest.txt)
-          kustomize edit set image skymonil/${{ inputs.service_name }}=$DIGEST
 
-      - name: Commit & push to GitOps repo
+          IMAGE=skymonil/${{ inputs.service_name }}:${{ github.sha }}
+
+          echo "Updating image to $IMAGE"
+
+          kustomize edit set image \
+          skymonil/${{ inputs.service_name }}=$IMAGE
+
+
+      - name: Commit & push
         run: |
+
           cd gitops
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          
-          git add services/${{ inputs.service_name }}/overlays/${{ inputs.overlay }}/kustomization.yaml
-          git commit -m "Deploy ${{ inputs.service_name }} to ${{ inputs.overlay }} via CD pipeline" || echo "No changes to commit" --allow-empty
+
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git add .
+
+          git commit -m "Deploy ${{ inputs.service_name }}:${{ github.sha }} to ${{ inputs.overlay }}" || true
+
           git push
