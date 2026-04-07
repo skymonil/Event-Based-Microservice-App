@@ -11,6 +11,8 @@ on:
         required: true
       DOCKER_PASSWORD:
         required: true
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -47,3 +49,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           docker push skymonil/${{ inputs.service_name }}:${{ github.sha }}
+      
+      - name: Save Image Digest
+        if: github.ref == 'refs/heads/main'
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' skymonil/${{ inputs.service_name }}:${{ github.sha }} | awk -F@ '{print $2}')
+          echo "Extracted Digest: $DIGEST"
+          echo "$DIGEST" > image-digest.txt
