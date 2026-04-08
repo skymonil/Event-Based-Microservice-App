@@ -39,7 +39,7 @@ app.get("/health", (_req, res) => {
 });
 
 // Routes
-app.use("/api", userRoutes);
+app.use("/users", userRoutes);
 
 // Central error handler (must be last)
 app.use(errorMiddleware);

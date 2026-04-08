@@ -13,12 +13,12 @@ const {
 	userIdParamSchema,
 } = require("../validators/user.validator");
 // Create a new user
-router.post("/users", validate(createUserSchema), createUser);
+router.post("/", validate(createUserSchema), createUser);
 
 // Get user by ID
-router.get("/users/:id", validate(userIdParamSchema, "params"), getUserById);
+router.get("/:id", validate(userIdParamSchema, "params"), getUserById);
 
 // Login user
-router.post("/users/login", validate(loginSchema), loginUser);
+router.post("/login", validate(loginSchema), loginUser);
 
 module.exports = router;
