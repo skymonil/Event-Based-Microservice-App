@@ -1,11 +1,5 @@
 # syntax=docker/dockerfile:1.7
 
-
-
-
-############################
-# base layer
-############################
 FROM node:22-alpine AS base
 
 ARG SERVICE_NAME
@@ -17,32 +11,20 @@ RUN corepack enable pnpm
 
 WORKDIR /app
 
-# copy workspace metadata
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
-COPY packages/ ./packages/
+COPY packages ./packages
+COPY services ./services
 
-# copy only service manifest
-COPY services/${SERVICE_NAME}/package.json ./services/${SERVICE_NAME}/
-
-
-# prefetch deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm fetch
 
 
-
-############################
-# builder
-############################
 FROM base AS builder
 
 ARG SERVICE_NAME
 
 WORKDIR /app
-
-COPY packages/common ./packages/common
-
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install \
@@ -50,37 +32,32 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     --frozen-lockfile \
     --offline
 
-
-COPY services/${SERVICE_NAME} ./services/${SERVICE_NAME}
-
 WORKDIR /app/services/${SERVICE_NAME}
 
 RUN pnpm run build
 
 
+WORKDIR /app
 
-############################
-# runtime
-############################
+RUN pnpm deploy \
+    --filter ${SERVICE_NAME} \
+    --prod \
+    --legacy \
+    /deploy
+
+
 FROM node:22-alpine AS runtime
-
 ARG SERVICE_NAME
-
 RUN apk add --no-cache tini
 
 WORKDIR /app
-
 USER node
 
-ENV NODE_ENV=production
+COPY --from=builder /deploy/package.json ./package.json
+COPY --from=builder /deploy/node_modules ./node_modules
 
+COPY --from=builder /app/services/${SERVICE_NAME}/dist ./dist
 
-COPY --chown=node:node \
-    --from=builder \
-    /app/services/${SERVICE_NAME}/dist \
-    ./dist
+ENTRYPOINT ["/sbin/tini","--"]
 
-
-ENTRYPOINT ["/sbin/tini", "--"]
-
-CMD ["node", "dist/server.js"]
+CMD ["node","dist/server.js"]
