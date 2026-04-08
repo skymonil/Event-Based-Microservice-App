@@ -19,6 +19,6 @@ router.post("/users", validate(createUserSchema), createUser);
 router.get("/users/:id", validate(userIdParamSchema, "params"), getUserById);
 
 // Login user
-router.post("/login", validate(loginSchema), loginUser);
+router.post("/users/login", validate(loginSchema), loginUser);
 
 module.exports = router;
