@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { AppError } = require("@my-app/common");
+const { AppError } = require("./app-error");
 
 /**
  * JWT authentication middleware
