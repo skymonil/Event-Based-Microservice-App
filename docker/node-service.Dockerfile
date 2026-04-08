@@ -20,6 +20,7 @@ WORKDIR /app
 # copy workspace metadata
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
+COPY packages/ ./packages/
 
 # copy only service manifest
 COPY services/${SERVICE_NAME}/package.json ./services/${SERVICE_NAME}/
