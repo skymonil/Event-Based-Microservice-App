@@ -51,8 +51,11 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
 
-          git add .
+          git add services/${{ inputs.service_name }}/overlays/${{ inputs.overlay }}/kustomization.yaml
 
-          git commit -m "Deploy ${{ inputs.service_name }}:${{ github.sha }} to ${{ inputs.overlay }}" || true
+
+          git commit -m "Deploy ${{ inputs.service_name }} to ${{ inputs.overlay }}" || echo "No changes to commit"
+
+          git pull --rebase origin main
 
           git push

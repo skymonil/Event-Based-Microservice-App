@@ -15,7 +15,7 @@ const server = http.createServer(app);
 	await connectProducer();
 	await startConsumer();
 	server.listen(config.port, () => {
-		logger.info(`Payment Service running on port ${config.port}`);
+		logger.info(`Payment Service 5.79 running on port ${config.port}`);
 	});
 })();
 
