@@ -2,7 +2,7 @@
 
 // Fix: Match the actual file locations in your packages/common/src/ folder
 const { logger } = require('./src/logger'); // Remove 'utils/' if it's just in src
-const { AppError } = require("@my-app/common");
+const { AppError } = require("./src/appError"); // Adjust path if needed
 
 const authenticate = require('./src/auth.middleware');
 const errorHandler = require('./src/error.middleware');
