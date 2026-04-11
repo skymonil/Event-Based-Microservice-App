@@ -2,7 +2,7 @@ const client = require("prom-client");
 
 const register = new client.Registry();
 
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "user-service";
+const SERVICE_NAME = process.env.SERVICE_NAME || "user-service";
 
 /*
 ================================

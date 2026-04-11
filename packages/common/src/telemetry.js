@@ -16,18 +16,18 @@ const initTelemetry = (serviceName) => {
 
     const COLLECTOR_URL =
         process.env.OTEL_EXPORTER_OTLP_ENDPOINT ||
-        "http://otel-collector-opentelemetry-collector.observability:4318";
+        "http://alloy.observability.svc.cluster.local:4318";
 
     const sdk = new NodeSDK({
         resource: resourceFromAttributes({
             [SemanticResourceAttributes.SERVICE_NAME]: finalServiceName,
         }),
         traceExporter: new OTLPTraceExporter({
-            url: `${COLLECTOR_URL}/v1/traces`,
+            url: `${COLLECTOR_URL}`,
         }),
         metricReader: new PeriodicExportingMetricReader({
             exporter: new OTLPMetricExporter({
-                url: `${COLLECTOR_URL}/v1/metrics`,
+                url: `${COLLECTOR_URL}`,
             }),
             exportIntervalMillis: 60000,
         }),
