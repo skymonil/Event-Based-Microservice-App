@@ -69,12 +69,12 @@ const getUserById = async (id) => {
 	const user = await userQueries.getUserById(id);
 	if (!user) {
 		trackError("user_does_not_exist");
-		throw new AppError(
-			404,
-			"Not Found",
-			"User not found",
-			"/problems/user-not-found",
-		);
+		throw new AppError({
+            status: 404,
+            title: "Not Found",
+            detail: "User not found",
+            type: "/problems/user-not-found"
+        });
 	}
 
 	return {
