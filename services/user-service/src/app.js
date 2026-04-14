@@ -14,13 +14,13 @@ const { register } = require("./metrics");
 
 const app = express();
 
-app.use(prometheusMiddleware(metrics));
+/* app.use(prometheusMiddleware(metrics)); */
 
 //Prometheus Scrape Endpoint
-app.get("/metrics", async (_req, res) => {
+/* app.get("/metrics", async (_req, res) => {
 	res.set("Content-Type", register.contentType);
     res.end(await register.metrics());
-});
+}); */
 
 // Security headers
 app.use(helmet());

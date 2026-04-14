@@ -8,7 +8,7 @@ const consumer = kafka.consumer({
 });
 const metrics = require("../metrics");
 
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+const SERVICE_NAME = process.env.SERVICE_NAME || "inventory-service";
 
 const { context, propagation, trace } = require("@opentelemetry/api");
 const tracer = trace.getTracer("inventory-redis-projection");

@@ -10,7 +10,7 @@ const tracer = trace.getTracer("inventory-service");
  * Create a new product in the catalog
  */
 
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+const SERVICE_NAME = process.env.SERVICE_NAME || "inventory-service";
 
 const createProduct = async ({ id, name, sku }) => {
 	const end = metrics.dbQueryDuration.startTimer({
