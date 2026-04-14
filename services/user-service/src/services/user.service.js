@@ -35,7 +35,8 @@ const createUser = async ({ name, email, password }) => {
             status: 409,
             title: "Conflict",
             detail: `User with email ${email} already exists`,
-            type: "/problems/user-already-exists"
+            type: "/problems/user-already-exists",
+			isOperational: true
         });
     }
 
@@ -73,7 +74,8 @@ const getUserById = async (id) => {
             status: 404,
             title: "Not Found",
             detail: "User not found",
-            type: "/problems/user-not-found"
+            type: "/problems/user-not-found",
+			isOperational: true
         });
 	}
 
@@ -105,6 +107,7 @@ const loginUser = async (email, password) => {
 			title: "Unauthorized",
 			status: 401,
 			detail: "User does not exist",
+			isOperational: true
 		});
 	}
 
@@ -124,6 +127,7 @@ const loginUser = async (email, password) => {
 			title: "Unauthorized",
 			status: 401,
 			detail: "Invalid email or password",
+			isOperational: true
 		});
 	}
 
