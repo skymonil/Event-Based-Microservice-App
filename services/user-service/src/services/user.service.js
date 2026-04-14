@@ -31,13 +31,13 @@ const createUser = async ({ name, email, password }) => {
 	const existingUser = await userQueries.getUserByEmail(email);
 	if (existingUser) {
 		trackError("user_exists");
-		throw new AppError(
-			409,
-			"Conflict",
-			`User with email ${email} already exists`,
-			"/problems/user-already-exists",
-		);
-	}
+		throw new AppError({
+            status: 409,
+            title: "Conflict",
+            detail: `User with email ${email} already exists`,
+            type: "/problems/user-already-exists"
+        });
+    }
 
 	// Hash password
 	const passwordHash = await bcrypt.hash(password, 10);

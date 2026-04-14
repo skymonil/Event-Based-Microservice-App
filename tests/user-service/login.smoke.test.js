@@ -39,13 +39,13 @@ describe("User Service - Login Smoke Test", () => {
 	}, 60000); // 🟢 Jest Hook Timeout set to 60s
 
 	it("should login and return a JWT token", async () => {
-		const res = await client.post("/api/login", { email, password });
+		const res = await client.post("/api/users/login", { email, password });
 		expect(res.status).toBe(200);
 		expect(res.data).toHaveProperty("token");
 	});
 
 	it("should allow access to protected user profile", async () => {
-		const loginRes = await client.post("/api/login", { email, password });
+		const loginRes = await client.post("/api/users/login", { email, password });
 		const token = loginRes.data.token;
 
 		const profileRes = await client.get(`/api/users/${userId}`, {
@@ -57,7 +57,7 @@ describe("User Service - Login Smoke Test", () => {
 	});
 
 	it("should reject login with wrong password (401)", async () => {
-		const res = await client.post("/api/login", {
+		const res = await client.post("/api/users/login", {
 			email,
 			password: "WrongPassword",
 		});
