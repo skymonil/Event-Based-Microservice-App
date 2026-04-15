@@ -54,7 +54,7 @@ describe("User Service - Login Smoke Test", () => {
 
 		expect(profileRes.status).toBe(200);
 		expect(profileRes.data.id).toBe(userId);
-	});
+	}) ;
 
 	it("should reject login with wrong password (401)", async () => {
 		const res = await client.post("/api/users/login", {
