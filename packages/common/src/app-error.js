@@ -1,10 +1,10 @@
 class AppError extends Error {
-    constructor(status, title, detail, type) {
+    constructor({status, title, detail, type}) {
         super(detail);
-        this.status = status;
-        this.title = title;
+        this.status = status || 500;
+        this.title = title || "Internal Server Error";
         this.detail = detail;
-        this.type = type;
+        this.type = type || 'about:blank';
         this.isOperational = true; // This is the key for the middleware!
         Error.captureStackTrace(this, this.constructor);
     }
