@@ -10,6 +10,7 @@ const prometheusMiddleware = require('./src/prometheusMiddleware');
 
 const { initTelemetry } = require('./src/telemetry');
 
+
 module.exports = {
   initTelemetry,
 
@@ -17,9 +18,9 @@ module.exports = {
 
   AppError,
 
-  authMiddleware,
+  authMiddleware: authenticate,
 
-  errorMiddleware,
+  errorMiddleware: errorHandler,
 
   prometheusMiddleware
 
