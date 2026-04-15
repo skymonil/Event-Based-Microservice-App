@@ -192,6 +192,7 @@ services:
         condition: service_started
     ports:
       - "3002:3002"
+    working_dir: /app/services/payment-service
     command:   pnpm run dev && pnpm run migrate
 
   inventory-service: 
