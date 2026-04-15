@@ -83,11 +83,6 @@ const loginUser = async (email, password) => {
 	if (!user) {
 		trackError("invalid_login");
 		loginAttempts.labels({ status: "failed", reason: "user_not_found" }).inc();
-		loginAttempts
-			.labels({
-				status: "failed",
-			})
-			.inc();
 		throw new AppError({
 			type: "/problems/invalid-credentials",
 			title: "Unauthorized",

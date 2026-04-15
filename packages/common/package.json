@@ -1,5 +1,19 @@
 {
   "name": "@my-app/common",
-  "version": "1.0.0",
-  "main": "index.js"
+  "version": "1.0.1",
+  "description": "Shared utilities and middlewares for microservices",
+  "main": "index.js", 
+  "scripts": {
+    "test": "jest",
+    "lint": "biome lint .",
+    "build": "echo 'No build step required for plain JS'" 
+  },
+  "dependencies": {
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "@opentelemetry/api": "^1.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

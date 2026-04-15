@@ -1,3 +1,4 @@
+// error.middleware.js
 const { trace, context } = require("@opentelemetry/api");
 const { logger } = require("./logger");
 
