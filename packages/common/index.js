@@ -12,9 +12,15 @@ const { initTelemetry } = require('./src/telemetry');
 
 module.exports = {
   initTelemetry,
+
   logger,
+
   AppError,
-  authMiddleware: authenticate,
-  errorMiddleware: errorHandler,
+
+  authMiddleware,
+
+  errorMiddleware,
+
   prometheusMiddleware
+
 };
