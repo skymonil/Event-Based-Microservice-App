@@ -2,18 +2,21 @@
   "name": "@my-app/common",
   "version": "1.0.1",
   "description": "Shared utilities and middlewares for microservices",
-  "main": "index.js", 
+  "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "lint": "biome lint .",
-    "build": "echo 'No build step required for plain JS'" 
+    "build": "echo 'No build step required for plain JS'"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.8.0",
     "pino": "^9.0.0",
-    "pino-pretty": "^11.0.0",
-    "@opentelemetry/api": "^1.8.0"
+    "pino-pretty": "^11.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0"
   }
 }

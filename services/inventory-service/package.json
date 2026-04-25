@@ -36,7 +36,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "jest --passWithNoTests",
 		"dev": "nodemon -L src/index.js",
 		"start": "node dist/server.js",
 		"build": "esbuild src/index.js --bundle --platform=node --packages=external --target=node22  --minify --outfile=dist/server.js",

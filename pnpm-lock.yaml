@@ -32,6 +32,10 @@ importers:
       pino-pretty:
         specifier: ^11.0.0
         version: 11.3.0
+    devDependencies:
+      jest:
+        specifier: ^30.2.0
+        version: 30.2.0(@types/node@25.3.0)
 
   services/inventory-service:
     dependencies:
