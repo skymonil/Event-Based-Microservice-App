@@ -39,6 +39,7 @@
 		"test": "jest --passWithNoTests",
 		"dev": "nodemon -L src/index.js",
 		"start": "node dist/server.js",
+		"test:integration": "jest --passWithNoTests",
 		"build": "esbuild src/index.js --bundle --packages=external --platform=node --target=node22  --minify --outfile=dist/server.js",
 		"migrate": "dbmate -d \"src/db/migrations\" up",
 		"migrate:down": "dbmate down"

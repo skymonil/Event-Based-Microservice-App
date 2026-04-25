@@ -6,7 +6,7 @@ const {
 	createUser,
 	getUserById,
 	loginUser,
-} = require("../controllers/user.contoller.js");
+} = require("../controllers/user.controller.js");
 const {
 	createUserSchema,
 	loginSchema,
