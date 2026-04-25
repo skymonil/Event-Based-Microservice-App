@@ -5,7 +5,12 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "pnpm -r run test",
+		"test:watch": "pnpm -r run test:watch",
+		"test:user": "pnpm --filter user-service run test:watch",
+		"test:inventory": "pnpm --filter inventory-service run test:watch",
+		"test:order": "pnpm --filter order-service run test:watch",
+		"test:payment": "pnpm --filter payment-service run test:watch",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"check:all": "biome check --write --unsafe .",
@@ -22,7 +27,6 @@
 		"husky": "^9.1.7",
 		"lint-staged": "^16.4.0"
 	},
-
 	"lint-staged": {
 		"*.{js,ts,jsx,tsx,json,css}": [
 			"biome check --write --no-errors-on-unmatched"
