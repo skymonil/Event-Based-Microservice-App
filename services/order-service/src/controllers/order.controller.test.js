@@ -25,7 +25,7 @@ describe("Order Controller Unit Tests", () => {
             body: {},
             params: {},
             headers: {},
-            user: { userId: "user-123" },
+            user: { userId: "550e8400-e29b-41d4-a716-446655440000" },
             requestId: "req-abc",
         };
         res = {
@@ -46,7 +46,7 @@ describe("Order Controller Unit Tests", () => {
             await orderController.createOrder(req, res, next);
 
             expect(orderService.createOrder).toHaveBeenCalledWith({
-                userId: "user-123",
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 items: req.body.items,
                 totalAmount: 100,
                 idempotencyKey: "idemp-123",
@@ -101,7 +101,7 @@ describe("Order Controller Unit Tests", () => {
 
             expect(orderService.cancelOrder).toHaveBeenCalledWith({
                 orderId: "order-1",
-                userId: "user-123",
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 idempotencyKey: "cancel-key-123",
             });
             expect(res.status).toHaveBeenCalledWith(202);

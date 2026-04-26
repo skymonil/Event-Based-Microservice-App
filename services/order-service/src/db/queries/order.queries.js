@@ -123,10 +123,11 @@ const markCancelRequested = async (orderId, key, client) => {
 	);
 };
 
-const insertProcessedEvent = async (eventId, client = db) => {
+const insertProcessedEvent = async (eventId,eventType, client = db) => {
 	try {
-		await client.query(`INSERT INTO processed_events (event_id) VALUES ($1)`, [
+		await client.query(`INSERT INTO processed_events (event_id, event_type) VALUES ($1, $2)`, [
 			eventId,
+			eventType
 		]);
 		return true; // Success, it's a new event
 	} catch (err) {

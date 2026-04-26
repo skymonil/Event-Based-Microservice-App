@@ -45,6 +45,12 @@
 		"migrate": "dbmate -d \"src/db/migrations\" up",
 		"migrate:down": "dbmate down"
 	},
+	
+	  "jest": {
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ]
+  },
 	"keywords": [],
 	"author": "",
 	"license": "ISC",

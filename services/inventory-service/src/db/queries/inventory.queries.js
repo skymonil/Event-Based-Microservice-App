@@ -270,10 +270,10 @@ const claimOrder = async (orderId, client) => {
 };
 
 // 2. Check existing order status (For idempotency checks)
-const getInventoryOrderStatus = async (orderId) => {
-	const result = await db.query(
-		`SELECT status FROM inventory_orders WHERE order_id = $1`,
-		[orderId],
+const getInventoryOrderStatus = async (orderId, status, client = db) => {
+	const result = await client.query(
+		`SELECT status FROM inventory_orders WHERE status = $2 AND order_id = $1`,
+		[orderId, status],
 	);
 	return result.rows[0];
 };

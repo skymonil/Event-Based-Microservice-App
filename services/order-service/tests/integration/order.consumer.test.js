@@ -11,7 +11,9 @@ jest.mock("@my-app/common", () => ({
         }
     }
 }));
-
+jest.mock("uuid", () => ({
+    v4: () => "550e8400-e29b-41d4-a716-446655440000"
+}));
 jest.mock("@opentelemetry/api", () => {
     const mockSpan = { setAttribute: jest.fn(), setStatus: jest.fn(), recordException: jest.fn(), end: jest.fn() };
     return {
@@ -35,11 +37,12 @@ const { execSync } = require("child_process");
 const path = require("path");
 
 // 🟢 Require the service and db AFTER mocks
-const orderService = require("../../src/services/order.service");
-const db = require("../../src/db/index");
+
 
 describe("Order Service - Kafka Consumer Integration Tests", () => {
     let pgContainer;
+    let db;           // 🟢 Declare variables here
+    let orderService;
 
     beforeAll(async () => {
         console.log("🐳 Starting PostgreSQL Testcontainer for Consumers...");
@@ -59,6 +62,8 @@ describe("Order Service - Kafka Consumer Integration Tests", () => {
             stdio: "ignore", // Keep terminal clean
             shell: true,
         });
+        db = require("../../src/db/index");
+        orderService = require("../../src/services/order.service");
     }, 60000);
 
     beforeEach(async () => {
@@ -71,14 +76,14 @@ describe("Order Service - Kafka Consumer Integration Tests", () => {
         console.log("🛑 Stopping Testcontainer...");
         if (db && typeof db.close === 'function') await db.close();
         if (pgContainer) await pgContainer.stop();
-    });
+    },15000);
 
     // --- Helper to Seed an Order ---
     const seedOrder = async (orderId, status = "CREATED") => {
         await db.query(
             `INSERT INTO orders (id, user_id, items, total_amount, status, idempotency_key)
              VALUES ($1, $2, $3, $4, $5, $6)`,
-            [orderId, "user-123", JSON.stringify([{ id: "item-1" }]), 100.00, status, "seed-key"]
+            [orderId, "550e8400-e29b-41d4-a716-446655440000", JSON.stringify([{ id: "item-1" }]), 100.00, status, "seed-key"]
         );
     };
 
@@ -86,7 +91,7 @@ describe("Order Service - Kafka Consumer Integration Tests", () => {
         it("should update order status to PAID and record the event ID", async () => {
             const orderId = "11111111-e29b-41d4-a716-446655440000";
             const eventId = "evt-pay-001";
-            
+
             // 1. Setup: Seed a CREATED order
             await seedOrder(orderId, "CREATED");
 
@@ -104,12 +109,12 @@ describe("Order Service - Kafka Consumer Integration Tests", () => {
         it("should safely ignore duplicate Kafka messages (Idempotent Consumer)", async () => {
             const orderId = "22222222-e29b-41d4-a716-446655440000";
             const eventId = "evt-pay-duplicate-001";
-            
+
             await seedOrder(orderId, "CREATED");
 
             // 1. Simulate the first message arriving
             await orderService.handlePaymentCompleted(orderId, "pay-123", eventId);
-            
+
             // 2. Simulate Kafka delivering the EXACT SAME message again
             // If idempotency fails, this will throw a Unique Constraint error and crash
             await orderService.handlePaymentCompleted(orderId, "pay-123", eventId);

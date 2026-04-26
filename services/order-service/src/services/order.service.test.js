@@ -96,7 +96,7 @@ describe("Order Service Unit Tests", () => {
             // Assert Transaction Flow (BEGIN -> COMMIT)
             expect(mockDbClient.query).toHaveBeenNthCalledWith(1, "BEGIN");
             expect(orderQueries.createOrder).toHaveBeenCalledWith(
-                expect.objectContaining({ id: "order-123", totalAmount: 100 }),
+                expect.objectContaining({ id: "550e8400-e29b-41d4-a716-446655440000", totalAmount: 100 }),
                 mockDbClient // Ensures the transaction client was passed
             );
             expect(orderQueries.createOutboxEntry).toHaveBeenCalledWith(
@@ -113,7 +113,7 @@ describe("Order Service Unit Tests", () => {
             expect(metrics.orderValue.observe).toHaveBeenCalledWith(100);
 
             // Assert Return Value
-            expect(result.id).toBe("order-123");
+            expect(result.id).toBe("550e8400-e29b-41d4-a716-446655440000");
             expect(result.isDuplicate).toBe(false);
         });
 

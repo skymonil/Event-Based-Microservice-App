@@ -278,6 +278,7 @@ const handlePaymentCompleted = async (orderId, paymentId, eventId) => {
 
 				const isNewEvent = await orderQueries.insertProcessedEvent(
 					eventId,
+					"payment.successful",
 					client,
 				);
 
@@ -292,15 +293,20 @@ const handlePaymentCompleted = async (orderId, paymentId, eventId) => {
 				}
 
 				await orderQueries.updateOrderStatus(orderId, "PAID", client);
+				await client.query("COMMIT");
+
 				// 📊 Metric: Successful Payment
 
 				ordersTotal.inc({ status: "PAID" });
 				span.setStatus({ code: SpanStatusCode.OK });
 			} catch (err) {
+				// 🟢 FIX 3: Rollback on failure
+				await client.query("ROLLBACK");
 				span.recordException(err);
 				span.setStatus({ code: SpanStatusCode.ERROR });
 				throw err;
 			} finally {
+				client.release();
 				span.end();
 			}
 		},
