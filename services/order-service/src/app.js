@@ -51,7 +51,7 @@ app.get("/health/ready", async (_req, res) => {
 });
 
 // Routes
-app.use("/api", orderRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Central error handler (must be last)
 app.use(errorMiddleware);

@@ -14,24 +14,24 @@ const {
 	getOrderById,
 	getOrdersForUser,
 	cancelOrder,
-} = require("../controllers/order.contoller");
+} = require("../controllers/order.controller");
 
 // Create order
-router.post("/orders", authMiddleware, validate(createOrderSchema), createOrder);
+router.post("/create", authMiddleware, validate(createOrderSchema), createOrder);
 
 // Get order by ID
 router.get(
-	"/orders/:id",
+	"/:id",
 	authMiddleware,
 	validate(orderIdParamSchema, "params"),
 	getOrderById,
 );
 
 // Get orders for logged-in user
-router.get("/orders", authMiddleware, getOrdersForUser);
+router.get("/list", authMiddleware, getOrdersForUser);
 
 router.post(
-	"/orders/cancel/:id",
+	"/cancel/:id",
 	authMiddleware,
 	// 1. Validate the URL parameter (:id)
 	validate(orderIdParamSchema, "params"),

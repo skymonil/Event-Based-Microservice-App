@@ -1,6 +1,6 @@
-\restrict v4a6x6Nc3icKr9CC0wpsnKd3Haqg06cqK2CRuGVtVJohOO5iahJ1aYWGV8d8qcR
+\restrict dbmate
 
--- Dumped from database version 18.1
+-- Dumped from database version 16.12
 -- Dumped by pg_dump version 18.1
 
 SET statement_timeout = 0;
@@ -42,10 +42,20 @@ CREATE TABLE public.orders (
     user_id uuid NOT NULL,
     total_amount numeric NOT NULL,
     status text NOT NULL,
-    created_at timestamp without time zone,
+    items jsonb DEFAULT '[]'::jsonb NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     idempotency_key text,
-    items jsonb NOT NULL
+    cancellable_until timestamp with time zone DEFAULT (now() + '00:10:00'::interval) NOT NULL,
+    cancel_idempotency_key uuid,
+    cancelled_at timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN orders.cancel_idempotency_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.orders.cancel_idempotency_key IS 'Stored idempotency key for the cancellation/refund saga';
 
 
 --
@@ -60,7 +70,20 @@ CREATE TABLE public.outbox (
     payload jsonb NOT NULL,
     metadata jsonb,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    processed_at timestamp with time zone
+    processed_at timestamp with time zone,
+    traceparent text,
+    tracestate text
+);
+
+
+--
+-- Name: processed_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.processed_events (
+    event_id character varying(255) NOT NULL,
+    event_type character varying(100) NOT NULL,
+    processed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -98,11 +121,33 @@ ALTER TABLE ONLY public.outbox
 
 
 --
+-- Name: processed_events processed_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.processed_events
+    ADD CONSTRAINT processed_events_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: idx_orders_cancel_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_orders_cancel_idempotency_key ON public.orders USING btree (cancel_idempotency_key) WHERE (cancel_idempotency_key IS NOT NULL);
+
+
+--
+-- Name: idx_orders_cancelled_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_orders_cancelled_at ON public.orders USING btree (cancelled_at) WHERE (cancelled_at IS NOT NULL);
 
 
 --
@@ -113,17 +158,10 @@ CREATE INDEX idx_outbox_created_at ON public.outbox USING btree (created_at);
 
 
 --
--- Name: dbz_publication; Type: PUBLICATION; Schema: -; Owner: -
---
-
-CREATE PUBLICATION dbz_publication FOR ALL TABLES WITH (publish = 'insert, update, delete, truncate');
-
-
---
 -- PostgreSQL database dump complete
 --
 
-\unrestrict v4a6x6Nc3icKr9CC0wpsnKd3Haqg06cqK2CRuGVtVJohOO5iahJ1aYWGV8d8qcR
+\unrestrict dbmate
 
 
 --
@@ -134,4 +172,8 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('001'),
     ('002'),
     ('003'),
-    ('004');
+    ('004'),
+    ('005'),
+    ('006'),
+    ('007'),
+    ('008');
