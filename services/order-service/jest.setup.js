@@ -4,3 +4,4 @@
 // when trying to read config files without a .env present.
 process.env.DB_URL = "postgres://fake:fake@localhost:5432/fake_db";
 process.env.JWT_SECRET = "fake-secret-for-testing";
+process.env.KAFKA_BROKERS = "kafka:29092";
