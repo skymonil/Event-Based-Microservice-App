@@ -23,7 +23,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM base AS builder
 
 ARG SERVICE_NAME
-
+ENV SERVICE_NAME=${SERVICE_NAME}
 WORKDIR /app
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -48,7 +48,6 @@ RUN pnpm deploy \
 
 FROM node:22-alpine AS runtime
 ARG SERVICE_NAME
-ENV SERVICE_NAME=${SERVICE_NAME}
 RUN apk add --no-cache tini
 
 WORKDIR /app
