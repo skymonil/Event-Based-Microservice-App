@@ -25,12 +25,11 @@ jobs:
         uses: pnpm/action-setup@v4
 
       # 🟢 2. Setup Node.js with pnpm caching for faster CI runs
-      - name: Use Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'pnpm'
-          cache-dependency-path: 'tests/pnpm-lock.yaml'
 
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
