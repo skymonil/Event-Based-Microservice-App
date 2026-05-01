@@ -1,22 +1,15 @@
 {
-	"name": "synthetic-tests",
-	"version": "1.0.0",
-	"description": "Synthetic Smoke & E2E Tests for Argo Analysis",
-	"main": "index.js",
 	"scripts": {
-		"test:user": "jest tests/user-service",
-    "test:order": "jest tests/order-service",
-    "test:payment": "jest tests/payment-service",
-    "test:inventory": "jest tests/inventory-service",
-    "test:all": "jest tests/"
+		"test:user": "jest user-service",
+    "test:order": "jest order-service",
+    "test:payment": "jest payment-service",
+    "test:inventory": "jest inventory-service"
 
 	},
 	"dependencies": {
-		"axios": "^1.6.0",
-		"axios-retry": "^4.0.0",
-		"dotenv": "^16.3.0",
-		"jest": "^29.7.0",
+		"axios": "^1.15.2",
+		"jest": "^30.2.0",
 		"kafkajs": "^2.2.4",
-		"uuid": "^9.0.0"
+		"uuid": "^13.0.0"
 	}
 }
