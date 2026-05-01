@@ -23,8 +23,6 @@ jobs:
       # 🟢 1. Setup pnpm (Ensures the CI runner can interact with pnpm files)
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9 # or your specific version
 
       # 🟢 2. Setup Node.js with pnpm caching for faster CI runs
       - name: Use Node.js
