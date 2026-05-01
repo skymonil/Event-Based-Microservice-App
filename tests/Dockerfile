@@ -1,16 +1,20 @@
 FROM node:18-alpine
 
+# Enable pnpm using Node's built-in corepack
+RUN corepack enable pnpm
+
 WORKDIR /app
 
 # 1. Install dependencies (Layer caching)
-COPY package*.json ./
-RUN npm ci --only=production
+# 🟢 Must copy pnpm-lock.yaml instead of package-lock.json
+COPY package.json pnpm-lock.yaml ./
+
+# 🟢 The pnpm equivalent of 'npm ci --only=production'
+RUN pnpm install --prod --frozen-lockfile
 
 # 2. Copy the Test Framework & Suites
 COPY common ./common
-COPY user-service ./user-service
-#COPY order-service ./order-service
-# COPY inventory-service ./inventory-service
+COPY tests ./tests
 
 # 3. Default Command (Overridden by Argo Analysis args)
-CMD ["npm", "test"]
+CMD ["pnpm", "run", "test"]
