@@ -1,10 +1,12 @@
 // tests/common/httpClient.js
 import axios from "axios";
+// 🟢 Use the 'default' import or the direct path if the main one fails
 import axiosRetry from "axios-retry";
-// Ensure you add the .js extension here too!
-import config from "./config.js"; 
+import config from "./config.js";
 
-// 🟢 Use 'export' keyword directly
+// Inside createClient...
+const retry = axiosRetry.default || axiosRetry;
+
 export const createClient = (baseUrl = config.baseUrl) => {
     const client = axios.create({
         baseURL: baseUrl,
@@ -16,15 +18,13 @@ export const createClient = (baseUrl = config.baseUrl) => {
         },
     });
 
-    // Handle the axiosRetry default export vs named export quirk
-    const retry = axiosRetry.default || axiosRetry;
-
+    // 🟢 Call it using the extracted 'retry' variable
     retry(client, {
         retries: 3,
-        retryDelay: axiosRetry.exponentialDelay,
+        retryDelay: axiosRetry.exponentialDelay || (() => 1000), 
         retryCondition: (error) => {
             return (
-                axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+                (axiosRetry.isNetworkOrIdempotentRequestError && axiosRetry.isNetworkOrIdempotentRequestError(error)) ||
                 (error.response && error.response.status >= 500)
             );
         },
