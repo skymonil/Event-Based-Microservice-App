@@ -15,7 +15,6 @@ RUN pnpm install --prod --frozen-lockfile
 # 2. Copy the Test Framework & Suites
 COPY . .
 COPY common ./common
-COPY tests ./tests
 
 # 3. Default Command (Overridden by Argo Analysis args)
 CMD ["pnpm", "run", "test"]
