@@ -115,9 +115,9 @@ describe("User Service API Integration Tests", () => {
             const res = await request(app).get(`/api/users/${testId}`);
 
             expect(res.status).toBe(200);
-            expect(res.body.user.name).toBe("Existing User");
-            expect(res.body.user.email).toBe("existing@example.com");
-            expect(res.body.user).not.toHaveProperty("password_hash");
+            expect(res.body.name).toBe("Existing User");
+            expect(res.body.email).toBe("existing@example.com");
+            expect(res.body).not.toHaveProperty("password_hash");
         });
 
         it("should return 404 if the user does not exist", async () => {
