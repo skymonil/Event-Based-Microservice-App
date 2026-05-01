@@ -5,6 +5,7 @@
     "test:payment": "jest payment-service",
     "test:inventory": "jest inventory-service"
 
+	
 	},
 	"dependencies": {
 		"axios": "^1.15.2",

@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "tests/**"          # 🟢 Only runs if you touch the tests folder
+      - "tests/**"
       - ".github/workflows/tests-ci.yaml"
 
   pull_request:
@@ -20,6 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 🟢 1. Setup pnpm (Ensures the CI runner can interact with pnpm files)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9 # or your specific version
+
+      # 🟢 2. Setup Node.js with pnpm caching for faster CI runs
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'tests/pnpm-lock.yaml'
+
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
@@ -31,12 +45,12 @@ jobs:
         if: github.ref == 'refs/heads/main'
         working-directory: tests
         run: |
-          # 1. Build the image
+          # 3. Build using the dynamic SHA tag
           docker build -t skymonil/synthetic-tests:${{ github.sha }} .
           
-          # 2. Tag it as 'latest' so Argo always finds the newest version
+          # 4. Tag as 'latest'
           docker tag skymonil/synthetic-tests:${{ github.sha }} skymonil/synthetic-tests:latest
           
-          # 3. Push both tags
+          # 5. Push both tags
           docker push skymonil/synthetic-tests:${{ github.sha }}
           docker push skymonil/synthetic-tests:latest
