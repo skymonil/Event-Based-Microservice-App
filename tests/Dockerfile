@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
 # 2. Copy the Test Framework & Suites
+COPY . .
 COPY common ./common
 COPY tests ./tests
 
