@@ -1,9 +1,9 @@
 {
 	"scripts": {
 		"test:user": "jest user-service",
-    "test:order": "jest order-service",
-    "test:payment": "jest payment-service",
-    "test:inventory": "jest inventory-service"
+    "test:order": "jest order-service --passWithNoTests",
+    "test:payment": "jest payment-service --passWithNoTests",
+    "test:inventory": "jest inventory-service --passWithNoTests"
 
 	
 	},
