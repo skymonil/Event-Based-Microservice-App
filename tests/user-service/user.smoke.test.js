@@ -1,7 +1,7 @@
 // tests/user-service/user.smoke.test.js
-const { v4: uuidv4 } = require("uuid");
-const { createClient } = require("../common/httpClient");
-const { waitFor } = require("../common/waitFor");
+import { v4 as uuidv4 } from "uuid";
+import { createClient } from "../common/httpClient.js"; // Note the .js extension
+import { waitFor } from "../common/waitFor.js";
 
 const client = createClient(process.env.TARGET_URL); 
 
