@@ -9,9 +9,9 @@ const { SemanticResourceAttributes } = require("@opentelemetry/semantic-conventi
 
 const initTelemetry = (serviceName) => {
     // 1. Prioritize explicitly passed name, fallback to ENV, throw if missing
-    const finalServiceName = serviceName || process.env.OTEL_SERVICE_NAME;
+    const finalServiceName = serviceName || process.env.SERVICE_NAME;
     if (!finalServiceName) {
-        throw new Error("OTEL_SERVICE_NAME is required to initialize telemetry.");
+        throw new Error("SERVICE_NAME is required to initialize telemetry.");
     }
 
     const COLLECTOR_URL =
