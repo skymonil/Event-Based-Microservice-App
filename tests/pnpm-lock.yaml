@@ -18,8 +18,8 @@ importers:
         specifier: ^2.2.4
         version: 2.2.4
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.1
+        specifier: ^11.1.1
+        version: 11.1.1
 
 packages:
 
@@ -1311,8 +1311,8 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
-  uuid@13.0.1:
-    resolution: {integrity: sha512-9ezox2roIft6ExBVTVqibSd5dc5/47Sw/uY6b4SjQUT2TzQ0tltNquWA46y4xPQmdZYqvnio22SgWd41M86+jw==}
+  uuid@11.1.1:
+    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
 
   v8-to-istanbul@9.3.0:
@@ -2894,7 +2894,7 @@ snapshots:
       escalade: 3.2.0
       picocolors: 1.1.1
 
-  uuid@13.0.1: {}
+  uuid@11.1.1: {}
 
   v8-to-istanbul@9.3.0:
     dependencies:
