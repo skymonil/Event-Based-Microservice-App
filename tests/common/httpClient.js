@@ -1,32 +1,34 @@
 // tests/common/httpClient.js
-const axios = require("axios");
-const axiosRetry = require("axios-retry").default;
-const config = require("./config");
+import axios from "axios";
+import axiosRetry from "axios-retry";
+// Ensure you add the .js extension here too!
+import config from "./config.js"; 
 
-const createClient = (baseUrl = config.baseUrl) => {
-	const client = axios.create({
-		baseURL: baseUrl,
-		timeout: config.timeouts.http,
-		validateStatus: () => true,
-		headers: {
-			"Content-Type": "application/json",
-			"x-synthetic-test": "true", // Tag traffic so we can filter it in Prometheus/Logs
-		},
-	});
+// 🟢 Use 'export' keyword directly
+export const createClient = (baseUrl = config.baseUrl) => {
+    const client = axios.create({
+        baseURL: baseUrl,
+        timeout: config.timeouts.http,
+        validateStatus: () => true,
+        headers: {
+            "Content-Type": "application/json",
+            "x-synthetic-test": "true",
+        },
+    });
 
-	// Retry 3 times on network errors or 5xx responses (Service Unavailable)
-	axiosRetry(client, {
-		retries: 3,
-		retryDelay: axiosRetry.exponentialDelay,
-		retryCondition: (error) => {
-			return (
-				axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-				(error.response && error.response.status >= 500)
-			);
-		},
-	});
+    // Handle the axiosRetry default export vs named export quirk
+    const retry = axiosRetry.default || axiosRetry;
 
-	return client;
+    retry(client, {
+        retries: 3,
+        retryDelay: axiosRetry.exponentialDelay,
+        retryCondition: (error) => {
+            return (
+                axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+                (error.response && error.response.status >= 500)
+            );
+        },
+    });
+
+    return client;
 };
-
-module.exports = { createClient };
