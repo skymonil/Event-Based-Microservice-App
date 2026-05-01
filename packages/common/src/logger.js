@@ -43,7 +43,7 @@ const logger = pino({
     level: process.env.LOG_LEVEL || "info",
 
     base: {
-        service: process.env.OTEL_SERVICE_NAME || "unnamed-service",
+        service: process.env.SERVICE_NAME || "unnamed-service",
     },
 
     mixin() {

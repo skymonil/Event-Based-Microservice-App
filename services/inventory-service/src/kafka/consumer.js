@@ -14,7 +14,7 @@ const kafka = new Kafka({
 		retries: 10, // Try 10 times before crashing
 	},
 });
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+const SERVICE_NAME = process.env.SERVICE_NAME || "inventory-service";
 
 const consumer = kafka.consumer({
 	groupId: "inventory-group",

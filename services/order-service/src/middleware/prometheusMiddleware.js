@@ -1,6 +1,6 @@
 const metrics = require("../metrics");
 
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "inventory-service";
+const SERVICE_NAME = process.env.SERVICE_NAME || "inventory-service";
 
 module.exports = (req, res, next) => {
 	// 1. Use BigInt for cleaner high-precision timing
