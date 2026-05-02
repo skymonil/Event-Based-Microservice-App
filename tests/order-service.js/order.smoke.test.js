@@ -19,8 +19,9 @@ describe("Order Service - Critical Path Smoke Test", () => {
         if (process.env.SYNTHETIC_TEST_TOKEN) {
             authToken = process.env.SYNTHETIC_TEST_TOKEN;
         } else {
-            const secret = process.env.JWT_SECRET || "fallback-secret-do-not-use-in-prod";
-            authToken = jwt.sign({ userId: "00000000-0000-4000-a000-synthetic000" }, secret, { expiresIn: "5m" });
+             const secret = process.env.JWT_SECRET || "fallback-secret-do-not-use-in-prod";
+             const syntheticUserId = "11111111-e29b-41d4-a716-446655440000"; 
+            authToken = jwt.sign({ userId: syntheticUserId }, secret, { expiresIn: "5m" });
         }
 
         // 2. Wait for the pod to be ready
@@ -45,7 +46,7 @@ describe("Order Service - Critical Path Smoke Test", () => {
 
     it("1. should successfully create a new order (201)", async () => {
         const payload = {
-            items: [{ productId: "synthetic-product-001", quantity: 1 }],
+            items: [{ productId: "bc6ed327-a5c9-4551-92d2-f38462a095f4", quantity: 1 }],
             totalAmount: 19.99
         };
 
