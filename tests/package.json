@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"test:user": "node --experimental-vm-modules node_modules/jest/bin/jest.js user-service",
-		"test:order": "node --experimental-vm-modules node_modules/jest/bin/jest.js order-service --passWithNoTests",
+		"test:order": "node --experimental-vm-modules node_modules/jest/bin/jest.js order-service ",
 		"test:payment": "node --experimental-vm-modules node_modules/jest/bin/jest.js payment-service --passWithNoTests",
 		"test:inventory": "node --experimental-vm-modules node_modules/jest/bin/jest.js inventory-service --passWithNoTests"
 	},
@@ -12,6 +12,7 @@
 		"axios": "^1.15.2",
 		"dotenv": "^17.3.1",
 		"jest": "^30.2.0",
+		"jsonwebtoken": "^9.0.3",
 		"kafkajs": "^2.2.4",
 		"uuid": "^11.1.1"
 	}

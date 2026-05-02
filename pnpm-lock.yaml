@@ -403,6 +403,9 @@ importers:
       jest:
         specifier: ^30.2.0
         version: 30.2.0(@types/node@25.3.0)
+      jsonwebtoken:
+        specifier: ^9.0.3
+        version: 9.0.3
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4

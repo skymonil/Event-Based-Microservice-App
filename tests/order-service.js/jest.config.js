@@ -1,10 +1,15 @@
-const baseConfig = require("../jest.config.js") || {};
+import config from "../common/config.js"; // Note the .js extension
+
 
 module.exports = {
-	...baseConfig,
 	displayName: "order-service",
-	testEnvironment: "node",
-	verbose: true,
-	testMatch: ["**/*.e2e.test.js"],
-	testTimeout: 60000, // Extended timeout for Async Kafka flows
+    testEnvironment: "node",
+    verbose: true,
+    testMatch: ["**/*.smoke.test.js"],
+	testTimeout: 30000,
+	timeouts: {
+		http: 15000,
+		async: 20000,
+		jest: 30000,
+	},
 };
