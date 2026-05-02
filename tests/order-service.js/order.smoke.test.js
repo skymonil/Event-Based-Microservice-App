@@ -20,7 +20,7 @@ describe("Order Service - Critical Path Smoke Test", () => {
             authToken = process.env.SYNTHETIC_TEST_TOKEN;
         } else {
             const secret = process.env.JWT_SECRET || "fallback-secret-do-not-use-in-prod";
-            authToken = jwt.sign({ userId: "synthetic-smoke-user" }, secret, { expiresIn: "5m" });
+            authToken = jwt.sign({ userId: "00000000-0000-4000-a000-synthetic000" }, secret, { expiresIn: "5m" });
         }
 
         // 2. Wait for the pod to be ready
