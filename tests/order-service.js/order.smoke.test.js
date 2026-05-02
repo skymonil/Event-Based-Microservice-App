@@ -62,8 +62,8 @@ describe("Order Service - Critical Path Smoke Test", () => {
         // We send the exact same request again. 
         // A healthy live environment should catch this and return the previous state.
         const payload = {
-            items: [{ productId: "synthetic-product-001", quantity: 1 }],
-            totalAmount: 19.99
+            items: [{ productId: "bc6ed327-a5c9-4551-92d2-f38462a095f4", quantity: 1 }],
+            totalAmount: 2500
         };
 
         const res = await client.post("/api/orders/create", payload, {
