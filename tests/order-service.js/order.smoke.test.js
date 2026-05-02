@@ -24,20 +24,23 @@ describe("Order Service - Critical Path Smoke Test", () => {
         }
 
         // 2. Wait for the pod to be ready
-        await waitFor(
+         await waitFor(
             async () => {
                 try {
-                    const res = await client.get("/health");
-                    return res && res.status === 200;
+                    const res = await client.get("/health/ready"); // 🟢 Updated Path
+                    if (res && res.status === 200) return true;
+                    
+                    console.log(`[Health] Not ready yet. Status: ${res?.status}`);
+                    return false;
                 } catch (e) {
-                    console.log(`[Health Check] Waiting... Error: ${e.message}`);
+                    console.log(`[Health] Network Error: ${e.code || e.message}`);
                     return false;
                 }
             },
             60000,
             "Order service not ready for Smoke Test"
         );
-        console.log("✅ Order Service is up!");
+        console.log("✅ Order Service is up and DB is connected!");
     }, 60000);
 
     it("1. should successfully create a new order (201)", async () => {
