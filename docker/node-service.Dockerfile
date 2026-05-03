@@ -59,6 +59,8 @@ COPY --from=builder /deploy/node_modules ./node_modules
 
 COPY --from=builder /app/services/${SERVICE_NAME}/dist ./dist
 
+COPY --from=builder /app/services/${SERVICE_NAME}/src/db/migrations ./src/db/migrations
+
 ENTRYPOINT ["/sbin/tini","--"]
 
 CMD ["node","dist/server.js"]
