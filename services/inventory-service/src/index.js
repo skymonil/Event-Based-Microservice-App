@@ -25,7 +25,7 @@ const startServer = async () => {
 		logger.info("✅ Redis Stock Projection Consumer Connected & Ready");
 
 		server.listen(config.port, () => {
-			logger.info(`🚀 Inventory Service 5.83 running on port ${config.port}`);
+			logger.info(`🚀 Inventory Service 5.86 running on port ${config.port}`);
 		});
 	} catch (err) {
 		logger.error(err, "❌ Failed to start Inventory Service");
