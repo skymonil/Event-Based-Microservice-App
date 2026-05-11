@@ -6,7 +6,7 @@ WORKDIR /app
 
 # 1. Install dependencies
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 2. Copy the Test Suites and Common utilities
 COPY . .
