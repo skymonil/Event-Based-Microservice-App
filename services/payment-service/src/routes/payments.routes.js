@@ -11,12 +11,12 @@ const {
 const {
 	getPaymentsByOrder,
 	getPaymentsForUser,
-} = require("../controllers/payments.contoller");
+} = require("../controllers/payments.controller");
 const { auth } = require("../config/config");
 
 // Get payments for a specific order
 router.get(
-	"/payments/order/:orderId",
+	"/order/:orderId",
 	authMiddleware,
 	validate(getPaymentsByOrderSchema, "params"),
 	getPaymentsByOrder,
@@ -24,5 +24,5 @@ router.get(
 
 //Get all payments for a Logged-in User
 
-router.get("/payments", authMiddleware, getPaymentsForUser);
+router.get("/", authMiddleware, getPaymentsForUser);
 module.exports = router;

@@ -58,7 +58,7 @@ app.get("/ready", (_req, res) => {
 });
 
 // Routes
-app.use("/api", inventoryRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 app.get("/metrics", async (_req, res) => {
 	res.set("Content-Type", register.contentType);

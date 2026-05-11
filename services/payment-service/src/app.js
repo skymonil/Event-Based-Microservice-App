@@ -23,7 +23,7 @@ app.use(express.json());
 
 
 // Routes
-app.use("/api", paymentsRoutes);
+app.use("/api/payments", paymentsRoutes);
 
 app.get("/metrics", async (_req, res) => {
 	res.set("Content-Type", register.contentType);

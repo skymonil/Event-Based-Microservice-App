@@ -40,7 +40,7 @@ router.get("/products/:productId", inventoryController.getProduct);
 
 // Critical for debugging Sagas
 router.get(
-	"/inventory/reservations/:orderId",
+	"/reservations/:orderId",
 	inventoryController.getReservationsByOrder,
 );
 
