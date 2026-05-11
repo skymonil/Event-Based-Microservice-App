@@ -1,7 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-
+const db = require("./db");
 const { errorMiddleware, prometheusMiddleware,  } = require("@my-app/common");
 
 const paymentsRoutes = require("./routes/payments.routes");
@@ -31,8 +31,18 @@ app.get("/metrics", async (_req, res) => {
 });
 
 // Health check (important for k8s later)
-app.get("/health", (_req, res) => {
-	res.status(200).json({ status: "ok" });
+app.get("/health/live", (_req, res) => {
+	res.status(200).send("OK");
+});
+
+// Readiness check
+app.get("/health/ready", async (_req, res) => {
+    try {
+        await db.query("SELECT 1");
+        res.status(200).json({ status: "READY" });
+    } catch (err) {
+        res.status(503).json({ status: "NOT_READY" });
+    }
 });
 
 // Error handler (RFC 7807)

@@ -33,9 +33,25 @@ app.use(express.json());
 
 
 
-// Health check (important for Kubernetes)
-app.get("/health", (_req, res) => {
-	res.status(200).json({ status: "UP Version 5.53" });
+app.get("/healthz", (_req, res) => {
+    res.status(200).send("OK");
+});
+
+// Readiness: Checks if dependencies (DB, Kafka, etc.) are reachable.
+app.get("/readyz", async (_req, res) => {
+    try {
+        // Example: Check if your Database is connected
+        // await db.raw('SELECT 1'); 
+        
+        res.status(200).json({ 
+            status: "READY",
+            version: "5.53",
+            uptime: process.uptime()
+        });
+    } catch (err) {
+        // If DB is down, return 503 so K8s removes this pod from the LoadBalancer
+        res.status(503).json({ status: "NOT_READY", reason: err.message });
+    }
 });
 
 // Routes

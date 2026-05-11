@@ -36,7 +36,7 @@ router.get(
 /**
  * 📖 Read APIs (Support/Debugging)
  */
-router.get("/products/:productId", inventoryController.getProduct);
+router.get("/products/:product Id", inventoryController.getProduct);
 
 // Critical for debugging Sagas
 router.get(

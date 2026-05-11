@@ -53,8 +53,37 @@ app.get("/health", (_req, res) => {
 	});
 });
 
-app.get("/ready", (_req, res) => {
-	res.status(200).send("READY");
+app.get("/health/live", (_req, res) => {
+	res.status(200).send("OK");
+});
+
+app.get("/health/ready", async (_req, res) => {
+    const checks = {
+        database: false,
+        outboxSystem: "CDC (Debezium)", // Metadata for observability
+    };
+
+    try {
+        // 1. Check Database connection
+        // We use a query that ensures the connection pool is healthy
+        await db.query("SELECT 1");
+        checks.database = true;
+
+        // In CDC mode, if DB is up, we are ready to take orders.
+        return res.status(200).json({ 
+            status: "Ready", 
+            version: "5.53",
+            checks 
+        });
+        
+    } catch (err) {
+        logger.error({ err }, "Readiness check failed: Database unreachable");
+        res.status(503).json({ 
+            status: "Unhealthy", 
+            checks, 
+            error: "Database connection failed" 
+        });
+    }
 });
 
 // Routes

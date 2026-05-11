@@ -40,14 +40,32 @@ app.get("/health/live", (_req, res) => {
  * If this returns a non-200, K8s stops sending traffic but keeps the Pod alive.
  */
 app.get("/health/ready", async (_req, res) => {
-	try {
-		// We use a very lightweight query to check the pulse
-		await db.query("SELECT 1");
-		res.status(200).send("Ready");
-	} catch (err) {
-		logger.error({ err }, "Readiness check failed: Database unreachable");
-		res.status(503).send("Service Unavailable");
-	}
+    const checks = {
+        database: false,
+        outboxSystem: "CDC (Debezium)", // Metadata for observability
+    };
+
+    try {
+        // 1. Check Database connection
+        // We use a query that ensures the connection pool is healthy
+        await db.query("SELECT 1");
+        checks.database = true;
+
+        // In CDC mode, if DB is up, we are ready to take orders.
+        return res.status(200).json({ 
+            status: "Ready", 
+            version: "5.53",
+            checks 
+        });
+        
+    } catch (err) {
+        logger.error({ err }, "Readiness check failed: Database unreachable");
+        res.status(503).json({ 
+            status: "Unhealthy", 
+            checks, 
+            error: "Database connection failed" 
+        });
+    }
 });
 
 // Routes
