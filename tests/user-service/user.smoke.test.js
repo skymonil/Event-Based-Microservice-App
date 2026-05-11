@@ -16,7 +16,7 @@ describe("User Service - Core Journey Smoke Test", () => {
         await waitFor(
             async () => {
                 try {
-                    const res = await client.get("/health/live");
+                     const res = await client.get("/health/live");
                     return res.status === 200;
                 } catch (e) {
                     console.log(`[Health Check] Waiting... Error: ${e.message}`);
