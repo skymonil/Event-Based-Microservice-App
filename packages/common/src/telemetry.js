@@ -20,7 +20,7 @@ const initTelemetry = (serviceName) => {
 
     const sdk = new NodeSDK({
         resource: resourceFromAttributes({
-            [SemanticResourceAttributes.SERVICE_NAME]: finalServiceName,
+             [SemanticResourceAttributes.SERVICE_NAME]: finalServiceName,
         }),
 
         sampler: new AlwaysOnSampler(),
