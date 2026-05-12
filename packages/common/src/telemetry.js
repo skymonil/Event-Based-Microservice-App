@@ -6,7 +6,7 @@ const { OTLPMetricExporter } = require("@opentelemetry/exporter-metrics-otlp-htt
 const { PeriodicExportingMetricReader } = require("@opentelemetry/sdk-metrics");
 const { resourceFromAttributes } = require("@opentelemetry/resources");
 const { SemanticResourceAttributes } = require("@opentelemetry/semantic-conventions");
-const { AlwaysOnSampler } = require("@opentelemetry/core"); 
+const { AlwaysOnSampler } = require("@opentelemetry/sdk-trace-base");
 const initTelemetry = (serviceName) => {
     // 1. Prioritize explicitly passed name, fallback to ENV, throw if missing
     const finalServiceName = serviceName || process.env.SERVICE_NAME;

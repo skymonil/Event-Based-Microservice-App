@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0"
   },
