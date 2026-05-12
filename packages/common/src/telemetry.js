@@ -6,7 +6,7 @@ const { OTLPMetricExporter } = require("@opentelemetry/exporter-metrics-otlp-htt
 const { PeriodicExportingMetricReader } = require("@opentelemetry/sdk-metrics");
 const { resourceFromAttributes } = require("@opentelemetry/resources");
 const { SemanticResourceAttributes } = require("@opentelemetry/semantic-conventions");
-
+const { AlwaysOnSampler } = require("@opentelemetry/core"); 
 const initTelemetry = (serviceName) => {
     // 1. Prioritize explicitly passed name, fallback to ENV, throw if missing
     const finalServiceName = serviceName || process.env.SERVICE_NAME;
@@ -22,12 +22,15 @@ const initTelemetry = (serviceName) => {
         resource: resourceFromAttributes({
             [SemanticResourceAttributes.SERVICE_NAME]: finalServiceName,
         }),
+
+        sampler: new AlwaysOnSampler(),
+
         traceExporter: new OTLPTraceExporter({
-            url: `${COLLECTOR_URL}`,
+            url: `${COLLECTOR_URL}/v1/traces`,
         }),
         metricReader: new PeriodicExportingMetricReader({
             exporter: new OTLPMetricExporter({
-                url: `${COLLECTOR_URL}`,
+                url: `${COLLECTOR_URL}/v1/metrics`,
             }),
             exportIntervalMillis: 60000,
         }),
@@ -36,7 +39,7 @@ const initTelemetry = (serviceName) => {
 
     try {
         sdk.start();
-        console.log(`✅ OTel initialized for ${finalServiceName}`);
+        console.log(`✅ OTel initialized for ${finalServiceName} (AlwaysOnSampler)`);
     } catch (err) {
         console.error(`OTel init failed for ${finalServiceName}`, err);
     }
