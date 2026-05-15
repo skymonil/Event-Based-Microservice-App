@@ -20,6 +20,12 @@ const server = http.createServer(app);
 	});
 })();
 
+app.get("/metrics", async (_req, res) => {
+	res.set("Content-Type", register.contentType);
+	res.end(await register.metrics());
+});
+
+
 // Graceful shutdown (VERY IMPORTANT for K8s)
 gracefulShutdown(server, {
 	signals: "SIGINT SIGTERM",
