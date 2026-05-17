@@ -7,8 +7,8 @@ const { errorMiddleware, prometheusMiddleware,  } = require("@my-app/common");
 const paymentsRoutes = require("./routes/payments.routes");
 
 
+const { register } = require("./metrics");
 const metrics = require("./metrics");
-
 const app = express();
 
 // Security & basics
