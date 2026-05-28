@@ -1,1 +1,7 @@
-npx lint-staged
+#!/usr/bin/env sh
+
+echo "Running lint-staged..."
+npx lint-staged || exit 1
+
+echo "Running secret scan..."
+gitleaks protect --staged --verbose || exit 1
