@@ -1,0 +1,15 @@
+rules:
+  - id: no-direct-pool-query
+
+    message: Use db.query() wrapper instead of pool.query() directly.
+
+    severity: WARNING
+
+    languages:
+      - javascript
+
+    pattern: pool.query(...)
+
+    paths:
+      exclude:
+        - "**/src/db/index.js"

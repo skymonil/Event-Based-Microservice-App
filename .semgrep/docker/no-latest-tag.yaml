@@ -1,0 +1,11 @@
+rules:
+  - id: no-latest-tag
+
+    message: Avoid latest image tags. Use pinned versions.
+
+    severity: WARNING
+
+    languages:
+      - dockerfile
+
+    pattern-regex: 'FROM\s+.*:latest'

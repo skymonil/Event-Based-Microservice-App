@@ -1,0 +1,12 @@
+rules:
+  - id: no-root-user
+
+    message: Containers must not run as root.
+
+    severity: ERROR
+
+    languages:
+      - dockerfile
+
+    pattern: |
+      USER root
