@@ -1,11 +1,10 @@
 rules:
-  - id: no-latest-tag
-
-    message: Avoid latest image tags. Use pinned versions.
-
-    severity: WARNING
+  - id: no-root-user
+    message: Containers must not run as root.
+    severity: ERROR
 
     languages:
       - dockerfile
 
-    pattern-regex: 'FROM\s+.*:latest'
+    pattern: |
+      USER root
