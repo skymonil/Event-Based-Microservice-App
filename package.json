@@ -22,7 +22,7 @@
 	"license": "ISC",
 	"packageManager": "pnpm@10.30.0",
 	"devDependencies": {
-		"@biomejs/biome": "2.4.10",
+		"@biomejs/biome": "2.5.0",
 		"esbuild": "^0.27.3",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.4.0"
