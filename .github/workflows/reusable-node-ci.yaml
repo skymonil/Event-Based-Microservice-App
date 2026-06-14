@@ -38,7 +38,7 @@ jobs:
         with:
           languages: javascript-typescript
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.30.0
 
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
           version: 10.30.0
       
