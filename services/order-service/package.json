@@ -2,12 +2,12 @@
 	"dependencies": {
 		"@my-app/common": "workspace:*",
 		"@opentelemetry/api": "^1.9.0",
-		"@opentelemetry/auto-instrumentations-node": "^0.67.3",
+		"@opentelemetry/auto-instrumentations-node": "^0.77.0",
 		"@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
 		"@opentelemetry/instrumentation-pg": "^0.66.0",
 		"@opentelemetry/sdk-metrics": "^2.5.0",
-		"@opentelemetry/sdk-node": "^0.208.0",
+		"@opentelemetry/sdk-node": "^0.219.0",
 		"cors": "^2.8.5",
 		"dbmate": "^2.28.0",
 		"dotenv": "^17.2.3",
@@ -45,12 +45,11 @@
 		"migrate": "dbmate -d \"src/db/migrations\" up",
 		"migrate:down": "dbmate down"
 	},
-	
-	  "jest": {
-    "setupFiles": [
-      "<rootDir>/jest.setup.js"
-    ]
-  },
+	"jest": {
+		"setupFiles": [
+			"<rootDir>/jest.setup.js"
+		]
+	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
