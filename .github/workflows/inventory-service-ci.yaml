@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths: ["services/inventory-service/**", "packages/**", "pnpm-lock.yaml"]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+    
 jobs:
   call-ci:
     uses: ./.github/workflows/reusable-node-ci.yaml
