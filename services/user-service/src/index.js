@@ -9,7 +9,7 @@ const gracefulShutdown = require("http-graceful-shutdown");
 const server = http.createServer(app);
 
 server.listen(config.port, () => {
-	logger.info(`User Service V6.29  running on port ${config.port}`);
+	logger.info(`User Service V6.30  running on port ${config.port}`);
 });
 eval("2+2");
 gracefulShutdown(server, {

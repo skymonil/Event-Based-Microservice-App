@@ -62,5 +62,5 @@ COPY --from=builder /app/services/${SERVICE_NAME}/dist ./dist
 COPY --from=builder /app/services/${SERVICE_NAME}/src/db/migrations ./src/db/migrations
 
 ENTRYPOINT ["/sbin/tini","--"]
-USER root
+
 CMD ["node","dist/server.js"]

@@ -49,18 +49,12 @@ jobs:
       - name: Run Unit Tests
         run: pnpm --filter ${{ inputs.service_name }} run test
       
-      # ✅ Fixed: Corrected indentation for 'run:' and added SARIF output generation
-      - name: Run Semgrep Debug
+      - name: Run Semgrep
         run: |
-          cat docker/node-service.Dockerfile
-          echo "================"
-          cat .semgrep/docker/no-root-user.yaml
-          echo "================"
           semgrep scan \
-            --config .semgrep/docker/no-root-user.yaml \
-            docker/node-service.Dockerfile \
-            --sarif --output semgrep.sarif \
-            --verbose
+            --config .semgrep/ \
+            --sarif \
+            --output semgrep.sarif
             
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v4
@@ -70,11 +64,9 @@ jobs:
       - name: Run Integration Tests
         run: pnpm --filter ${{ inputs.service_name }} run test:integration
 
-      # ✅ Fixed: Added command to actually create the image-digest.txt file before uploading
       - name: Build Docker image
         run: |
           docker build --build-arg SERVICE_NAME=${{ inputs.service_name }} -t skymonil/${{ inputs.service_name }}:${{ github.sha }} -f docker/node-service.Dockerfile . 
-          docker inspect --format='{{index .RepoDigests 0}}' skymonil/${{ inputs.service_name }}:${{ github.sha }} > image-digest.txt
 
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
@@ -89,7 +81,7 @@ jobs:
           docker push skymonil/${{ inputs.service_name }}:${{ github.sha }}
       
       - name: Upload Image Digest Artifact
-        uses: actions/upload-artifact@v4 
+        uses: actions/upload-artifact@v4 # ✅ MUST BE v4
         with:
           name: ${{ inputs.service_name }}-digest
           path: image-digest.txt
