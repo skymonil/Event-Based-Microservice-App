@@ -1,3 +1,4 @@
+## .github/workflows/inventory-service-ci.yaml
 name: Inventory Service Pipeline
 
 on:

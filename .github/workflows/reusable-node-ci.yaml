@@ -1,3 +1,4 @@
+# .github/workflows/reusable-node-ci.yaml
 name: Generic Node CI
 
 on:
@@ -24,7 +25,7 @@ jobs:
         uses: pnpm/action-setup@v3
         with:
           version: 10.30.0
-
+      
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -33,9 +34,26 @@ jobs:
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: Install Semgrep
+        run: |
+          python -m pip install semgrep
+          pip install semgrep
       
       - name: Run Unit Tests
         run: pnpm --filter ${{ inputs.service_name }} run test
+      
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config .semgrep/ 
+            --sarif \
+            --output semgrep.sarif
+            
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
       
       - name: Run Integration Tests
         run: pnpm --filter ${{ inputs.service_name }} run test:integration

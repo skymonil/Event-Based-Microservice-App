@@ -1,8 +1,9 @@
+# .github/workflows/inventory-service-cd.yaml
 name: Inventory Service CD
 
 on:
   workflow_run:
-    workflows: ["inventory Service Pipeline"] # Must match exactly the 'name:' of your CI workflow
+    workflows: ["Inventory Service Pipeline"] # Must match exactly the 'name:' of your CI workflow
     types:
       - completed
 

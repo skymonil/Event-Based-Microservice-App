@@ -1,8 +1,9 @@
+## .github/workflows/payment-service-cd.yaml
 name: Payment Service CD
 
 on:
   workflow_run:
-    workflows: ["payment Service Pipeline"] # Must match exactly the 'name:' of your CI workflow
+    workflows: ["Payment Service Pipeline"] # Must match exactly the 'name:' of your CI workflow
     types:
       - completed
 
