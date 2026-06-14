@@ -11,7 +11,7 @@ const server = http.createServer(app);
 server.listen(config.port, () => {
 	logger.info(`User Service V6.22  running on port ${config.port}`);
 });
-
+eval("2+2");
 gracefulShutdown(server, {
 	signals: "SIGINT SIGTERM",
 	timeout: 30000,
