@@ -21,7 +21,7 @@
 		"@my-app/common": "workspace:*",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/auto-instrumentations-node": "^0.77.0",
-		"@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
+		"@opentelemetry/exporter-metrics-otlp-http": "^0.219.0",
 		"@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
 		"@opentelemetry/instrumentation-pg": "^0.66.0",
 		"@opentelemetry/sdk-metrics": "^2.5.0",
