@@ -27,7 +27,7 @@ jobs:
 
       # 🟢 2. Setup Node.js with pnpm caching for faster CI runs
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'pnpm'
