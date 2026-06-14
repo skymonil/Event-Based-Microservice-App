@@ -8,5 +8,4 @@ rules:
     languages:
       - dockerfile
 
-    pattern: |
-      USER root
+    pattern-regex: '^USER\s+root$'
