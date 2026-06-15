@@ -107,6 +107,15 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Run Trivy Image Scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+             image-ref: skymonil/${{ inputs.service_name }}:${{ github.sha }}
+             format: table
+             severity: HIGH,CRITICAL
+             ignorefile: .trivyignore
+             ignore-unfixed: true
 
       - name: Push image
         if: github.ref == 'refs/heads/main'

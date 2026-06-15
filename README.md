@@ -248,3 +248,9 @@ If you’d like, I can next:
 ✅ Add badges (Docker, CI, Kubernetes)
 
 Just say 👍
+
+
+docker build \
+  --build-arg SERVICE_NAME=order-service \
+  -t order-service:local \
+  -f docker/node-service.Dockerfile .

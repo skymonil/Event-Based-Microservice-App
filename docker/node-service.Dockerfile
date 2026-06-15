@@ -7,6 +7,8 @@ ARG SERVICE_NAME
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+RUN apk update && apk upgrade --no-cache
+
 RUN corepack enable pnpm
 
 WORKDIR /app
@@ -49,6 +51,8 @@ RUN pnpm deploy \
 FROM node:22-alpine AS runtime
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
+
+RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache tini
 
 WORKDIR /app
