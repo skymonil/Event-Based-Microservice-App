@@ -9,7 +9,7 @@
 		"test:inventory": "node --experimental-vm-modules node_modules/jest/bin/jest.js inventory-service --passWithNoTests"
 	},
 	"dependencies": {
-		"axios": "^1.15.2",
+		"axios": "^1.16.0",
 		"dotenv": "^17.3.1",
 		"jest": "^30.2.0",
 		"jsonwebtoken": "^9.0.3",

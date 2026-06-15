@@ -1,6 +1,7 @@
 packages:
   - services/*
   - packages/common
+  - tests
 
 onlyBuiltDependencies:
   - bcrypt
