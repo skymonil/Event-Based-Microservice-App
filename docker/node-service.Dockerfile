@@ -52,6 +52,8 @@ FROM node:22-alpine AS runtime
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 
+ENV CI=true
+
 RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache tini
 RUN corepack enable pnpm
