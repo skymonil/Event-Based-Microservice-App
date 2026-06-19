@@ -54,10 +54,10 @@ ENV SERVICE_NAME=${SERVICE_NAME}
 
 RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache tini
-
+RUN corepack enable pnpm
 WORKDIR /app
 USER node
-RUN corepack enable pnpm
+
 COPY --from=builder /deploy/package.json ./package.json
 COPY --from=builder /deploy/node_modules ./node_modules
 
