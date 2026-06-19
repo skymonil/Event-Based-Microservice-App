@@ -55,8 +55,16 @@ ENV SERVICE_NAME=${SERVICE_NAME}
 RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache tini
 RUN corepack enable pnpm
+
 WORKDIR /app
+
+# 🟢 1. Fix Permissions: Give the node user full ownership of the working directory
+RUN chown -R node:node /app
+
 USER node
+
+# 🟢 2. Pre-warm Corepack: Force the download during the build so it doesn't happen in the cluster
+RUN pnpm --version
 
 COPY --from=builder /deploy/package.json ./package.json
 COPY --from=builder /deploy/node_modules ./node_modules
