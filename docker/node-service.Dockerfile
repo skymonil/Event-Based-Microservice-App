@@ -57,7 +57,7 @@ RUN apk add --no-cache tini
 
 WORKDIR /app
 USER node
-
+RUN corepack enable pnpm
 COPY --from=builder /deploy/package.json ./package.json
 COPY --from=builder /deploy/node_modules ./node_modules
 
