@@ -121,12 +121,12 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Run Trivy Image Scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
              image-ref: skymonil/${{ inputs.service_name }}:${{ github.sha }}
              format: table
              severity: HIGH,CRITICAL
-             ignorefile: .trivyignore
+             trivyignores: '.trivyignore'
              ignore-unfixed: true
 
       - name: Push image
