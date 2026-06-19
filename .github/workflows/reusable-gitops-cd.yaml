@@ -33,6 +33,8 @@ jobs:
         run: |
           yq -i '.microservice.image.tag = "${{ github.sha }}"' workloads/${{ inputs.overlay }}/${{ inputs.service_name }}/values.yaml
 
+          yq -i '.microservice.seeding.image.tag = "${{ github.sha }}"' workloads/${{ inputs.overlay }}/${{ inputs.service_name }}/values.yaml
+
       - name: Commit & push
         working-directory: gitops
         run: |
