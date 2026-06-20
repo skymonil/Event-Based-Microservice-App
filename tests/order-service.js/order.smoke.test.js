@@ -9,7 +9,7 @@ const client = createClient(process.env.TARGET_URL);
 
 describe("Order Service - Critical Path Smoke Test", () => {
     const idempotencyKey = `smoke-order-${Date.now()}-${uuidv4()}`;
-    let authToken;;;;
+    let authToken;
 
     beforeAll(async () => {
         console.log("⏳ Waiting for Order Service to become healthy...");
