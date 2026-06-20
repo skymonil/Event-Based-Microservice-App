@@ -16,7 +16,7 @@ const server = http.createServer(app);
 	await connectProducer();
 	await startConsumer();
 	server.listen(config.port, () => {
-		logger.info(`Order Service 5.76 running on port ${config.port}`);
+		logger.info(`Order Service 5.77 running on port ${config.port}`);
 	});
 })();
 
