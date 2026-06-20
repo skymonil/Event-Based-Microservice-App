@@ -13,6 +13,10 @@ permissions:
 
 jobs:
   call-ci:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     uses: ./.github/workflows/reusable-node-ci.yaml
     with:
       service_name: order-service
