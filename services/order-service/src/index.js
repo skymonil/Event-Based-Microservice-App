@@ -19,7 +19,7 @@ const server = http.createServer(app);
 		logger.info(`Order Service 5.81 running on port ${config.port}`);
 	});
 })();
-
+  
 app.get("/metrics", async (_req, res) => {
 	res.set("Content-Type", register.contentType);
 	res.end(await register.metrics());
