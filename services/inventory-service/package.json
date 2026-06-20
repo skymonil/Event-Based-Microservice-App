@@ -43,7 +43,7 @@
 		"build": "esbuild src/index.js --bundle --platform=node --packages=external --target=node22  --minify --outfile=dist/server.js",
 		"migrate": "dbmate -d \"src/db/migrations\" up",
 		"migrate:down": "dbmate down",
-		"db:seed": "psql -h localhost -U user -d inventory_db -f ./seed.sql"
+		"seed": "psql \"$DB_URL\" -f seed.sql"
 	},
 	"keywords": [],
 	"author": "",
