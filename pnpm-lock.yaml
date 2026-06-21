@@ -138,8 +138,8 @@ importers:
         specifier: ^5.9.2
         version: 5.11.1
       joi:
-        specifier: '>=18.2.1'
-        version: 18.2.1
+        specifier: ^18.2.3
+        version: 18.2.3
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -232,8 +232,8 @@ importers:
         specifier: ^3.1.14
         version: 3.1.16
       joi:
-        specifier: '>=18.2.1'
-        version: 18.2.1
+        specifier: ^18.2.3
+        version: 18.2.3
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -311,8 +311,8 @@ importers:
         specifier: ^3.1.14
         version: 3.1.16
       joi:
-        specifier: '>=18.2.1'
-        version: 18.2.1
+        specifier: ^18.2.3
+        version: 18.2.3
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -405,8 +405,8 @@ importers:
         specifier: ^3.1.14
         version: 3.1.16
       joi:
-        specifier: '>=18.2.1'
-        version: 18.2.1
+        specifier: ^18.2.3
+        version: 18.2.3
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -3305,8 +3305,8 @@ packages:
       node-notifier:
         optional: true
 
-  joi@18.2.1:
-    resolution: {integrity: sha512-2/OKlogiESf2Nh3TFCrRjrr9z1DRHeW0I+KReF67+4J0Ns+8hBtHRmoWAZ2OFU6I5+TWLEe6sVlSdXPjHm5UbQ==}
+  joi@18.2.3:
+    resolution: {integrity: sha512-N5A3KTWQpPWT4ExxxPlUx7WmykGXRzhNidWhV41d6Abu9YfI2NyWCJuxdPnslJCPWtbRpSVOWSnSS6GakLM/Rg==}
     engines: {node: '>= 20'}
 
   joycon@3.1.1:
@@ -7977,7 +7977,7 @@ snapshots:
       - supports-color
       - ts-node
 
-  joi@18.2.1:
+  joi@18.2.3:
     dependencies:
       '@hapi/address': 5.1.1
       '@hapi/formula': 3.0.2
