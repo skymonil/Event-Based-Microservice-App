@@ -30,6 +30,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +98,9 @@ jobs:
       - name: Run Integration Tests
         run: pnpm --filter ${{ inputs.service_name }} run test:integration
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
       - name: Build Docker image
         run: |
           docker build --build-arg SERVICE_NAME=${{ inputs.service_name }} -t skymonil/${{ inputs.service_name }}:${{ github.sha }} -f docker/node-service.Dockerfile . 
@@ -131,8 +135,17 @@ jobs:
 
       - name: Push image
         if: github.ref == 'refs/heads/main'
+        id: push-step
         run: |
           docker push skymonil/${{ inputs.service_name }}:${{ github.sha }}
+          # Capture the immutable sha256 digest string
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' skymonil/${{ inputs.service_name }}:${{ github.sha }})
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+
+      - name: Sign the published Docker image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cosign sign --yes "${{ steps.push-step.outputs.digest }}"
       
       - name: Upload Image Digest Artifact
         uses: actions/upload-artifact@v4 # ✅ MUST BE v4
