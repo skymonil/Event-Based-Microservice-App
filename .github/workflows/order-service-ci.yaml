@@ -17,6 +17,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
+      id-token: write
     uses: ./.github/workflows/reusable-node-ci.yaml
     with:
       service_name: order-service

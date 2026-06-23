@@ -10,7 +10,7 @@ permissions:
   contents: read
   security-events: write
   actions: read
-
+  id-token: write
 jobs:
   call-ci:
     uses: ./.github/workflows/reusable-node-ci.yaml
