@@ -13,7 +13,7 @@
 		"http": "^0.0.1-security",
 		"http-graceful-shutdown": "^3.1.14",
 		"ioredis": "^5.9.2",
-		"joi": "^18.0.2",
+		"joi": "^18.2.3",
 		"jsonwebtoken": "^9.0.3",
 		"kafkajs": "^2.2.4",
 		"pg": "^8.16.3",
