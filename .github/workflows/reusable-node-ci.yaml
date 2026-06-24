@@ -116,7 +116,7 @@ jobs:
          format: cyclonedx-json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
          name: ${{ inputs.service_name }}-sbom
          path: "*.json"
@@ -152,7 +152,7 @@ jobs:
           cosign sign --yes "${{ steps.push-step.outputs.digest }}"
       
       - name: Upload Image Digest Artifact
-        uses: actions/upload-artifact@v4 # ✅ MUST BE v4
+        uses: actions/upload-artifact@v7 # ✅ MUST BE v4
         with:
           name: ${{ inputs.service_name }}-digest
           path: image-digest.txt
